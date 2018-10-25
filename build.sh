@@ -11,17 +11,22 @@
 # git submodule update --init --recursive
 #
 
-cd thirdparty/dmflags
+pushd thirdparty/dmflags
+
 libtoolize && aclocal && autoheader && autoconf && automake --add-missing
 sh configure
-cd ~
+
+popd
 
 rm -rf build
 mkdir build
-cd build
+
+pushd build
 cmake -DCMAKE_BUILD_TYPE=relwithdebinfo ..
 cmake --build .
-cd ~
+
+popd
+
 # popd
 
 # echo continue && read -n 1
