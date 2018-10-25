@@ -24,6 +24,6 @@
 
 #include "dmos.h"
 
-int DMAPI DMDUMP_MAIN( int argc, char* argv[] );
+std::string exec(const char* cmd);
 
 #endif // __DMDUMP_H_INCLUDE__

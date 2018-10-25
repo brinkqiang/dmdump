@@ -48,6 +48,7 @@
 #include <queue>
 #include <deque>
 #include <list>
+#include <array>
 
 #include <set>
 #include <map>
@@ -95,6 +96,7 @@ using namespace stdext;
 #include <queue>
 #include <deque>
 #include <list>
+#include <array>
 
 #include <set>
 #include <map>
