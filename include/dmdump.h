@@ -22,7 +22,7 @@
 #ifndef __DMDUMP_H_INCLUDE__
 #define __DMDUMP_H_INCLUDE__
 
-#include "dmos.h"
+#include <string>
 
 std::string exec(const char* cmd);
 

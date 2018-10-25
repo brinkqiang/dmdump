@@ -20,6 +20,9 @@
 // SOFTWARE.
 
 #include "dmdump.h"
+#include <memory>
+#include <array>
+#include <stdio.h>
 
 std::string exec(const char* cmd)
 {
@@ -30,7 +33,8 @@ std::string exec(const char* cmd)
 #else
     std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
 #endif
-    if (!pipe) throw std::runtime_error("popen() failed!");
+    if (!pipe) return result;
+
     while (!feof(pipe.get())) {
         if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
             result += buffer.data();
