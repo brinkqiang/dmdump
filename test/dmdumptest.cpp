@@ -4,13 +4,13 @@
 
 #include <iostream>
 
-DEFINE_string(NAME, "httpserver", "n");
+DEFINE_string(n, "zsh", "name");
 
 // dmdumptest --NAME=httpserver
 int main(int argc, char **argv) 
 {   
 	DMFLAGS_INIT(argc, argv);
-    DMGenDumpFile(FLAGS_NAME);
-	std::cout << "NAME = " << FLAGS_NAME << std::endl;
+    DMGenDumpFile(FLAGS_n);
+	std::cout << "name = " << FLAGS_n << std::endl;
 	return 0;   
 }
