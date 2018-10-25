@@ -19,6 +19,23 @@ Copyright (c) 2013-2018 brinkqiang (brink.qiang@gmail.com)
 ## Intro
 dmdump
 ```cpp
+
+#include "dmdump.h"
+#include "dmflags.h"
+
+#include <iostream>
+
+DEFINE_string(n, "zsh", "name");
+
+// dmdump -n zsh
+int main(int argc, char **argv) 
+{   
+    DMFLAGS_INIT(argc, argv);
+    DMGenDumpFile(FLAGS_n);
+    std::cout << "name = " << FLAGS_n << std::endl;
+    return 0;   
+}
+
 ```
 ## Contacts
 [![Join the chat](https://badges.gitter.im/brinkqiang/dmdump/Lobby.svg)](https://gitter.im/brinkqiang/dmdump)
