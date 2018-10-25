@@ -24,15 +24,18 @@
 #include <array>
 #include <stdio.h>
 
+#ifdef WIN32
+#define popen _popen
+#define pclose _pclose
+#endif
+
 std::string exec(const char* cmd)
 {
     std::array<char, 128> buffer;
     std::string result;
-#ifdef WIN32
-    std::shared_ptr<FILE> pipe(_popen(cmd, "r"), _pclose);
-#else
+
     std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
-#endif
+
     if (!pipe) return result;
 
     while (!feof(pipe.get())) {
