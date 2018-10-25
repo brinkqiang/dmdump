@@ -17,7 +17,8 @@ Copyright (c) 2013-2018 brinkqiang (brink.qiang@gmail.com)
 [win-link]:  https://ci.appveyor.com/project/brinkqiang/dmdump "AppVeyor build status"
 
 ## Intro
-dmdump
+dmdump -n zsh
+
 ```cpp
 
 #include "dmdump.h"
