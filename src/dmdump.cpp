@@ -37,9 +37,11 @@
 
 #endif
 
+#define BUFFER_SIZE 256
+
 std::string DMExecute(const char* cmd)
 {
-    std::array<char, 128> buffer;
+    std::array<char, BUFFER_SIZE> buffer;
     std::string result;
 
     std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
@@ -47,7 +49,7 @@ std::string DMExecute(const char* cmd)
     if (!pipe) return result;
 
     while (!feof(pipe.get())) {
-        if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
+        if (fgets(buffer.data(), BUFFER_SIZE, pipe.get()) != nullptr)
             result += buffer.data();
     }
     return result;
