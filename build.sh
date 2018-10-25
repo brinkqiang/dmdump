@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # - install depends tools
 # yum -y install git
@@ -11,21 +11,21 @@
 # git submodule update --init --recursive
 #
 
-pushd thirdparty/dmflags
+cd thirdparty/dmflags
 
 libtoolize && aclocal && autoheader && autoconf && automake --add-missing
 sh configure
 
-popd
+cd ~
 
 rm -rf build
 mkdir build
 
-pushd build
+cd build
 cmake -DCMAKE_BUILD_TYPE=relwithdebinfo ..
 cmake --build .
 
-popd
+cd ~
 
 # popd
 
