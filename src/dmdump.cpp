@@ -131,7 +131,7 @@ bool DMGenDumpFile(const std::string& strName)
     for (int i = 0; i < vecList.size(); ++i)
     {
         char cmd[256] = { 0 };
-        sprintf(cmd, "gcore -o %s_%d.dmp %d", strName.c_str(), (int)vecList[i], (int)vecList[i]);
+        sprintf(cmd, "gcore -o %s.dmp %d", strName.c_str(), (int)vecList[i], (int)vecList[i]);
         std::cout << "cmd:[" << cmd << "]" << std::endl;
         std::string data = DMExecute(cmd);
         std::cout << "result:[" << data << "]" << std::endl;
