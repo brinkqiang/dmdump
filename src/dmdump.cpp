@@ -101,9 +101,9 @@ std::vector<uint64_t> DMGetProcessList(const std::string& strName)
 
     char cmd[256] = { 0 };
     sprintf(cmd, "pidof %s", strName.c_str());
-
+    std::cout << "cmd:[" << cmd << "]" << std::endl;
     std::string data = DMExecute(cmd);
-    std::cout << data << std::endl;
+    std::cout << "result:[" << data << "]" << std::endl;
 
     strtk::std_string::token_list_type token_list;
 
@@ -132,8 +132,9 @@ bool DMGenDumpFile(const std::string& strName)
     {
         char cmd[256] = { 0 };
         sprintf(cmd, "gcore -o %s_%d.dmp %d", strName.c_str(), (int)vecList[i], (int)vecList[i]);
-        std::string strData = DMExecute(cmd);
-        std::cout << strData << std::endl;
+        std::cout << "cmd:[" << cmd << "]" << std::endl;
+        std::string data = DMExecute(cmd);
+        std::cout << "result:[" << data << "]" << std::endl;
     }
 
     return true;
