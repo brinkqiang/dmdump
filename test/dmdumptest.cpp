@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-DEFINE_string(NAME, "httpserver", "name");
+DEFINE_string(NAME, "httpserver", "n");
 
 // dmdumptest --NAME=httpserver
 int main(int argc, char **argv) 
