@@ -22,8 +22,13 @@
 #ifndef __DMDUMP_H_INCLUDE__
 #define __DMDUMP_H_INCLUDE__
 
+#include <cstdint>
 #include <string>
+#include <vector>
 
-std::string exec(const char* cmd);
+std::string DMExecute(const char* cmd);
 
+std::vector<uint64_t> DMGetProcessList(const std::string& strName);
+
+bool DMGenDumpFile(const std::string& strName);
 #endif // __DMDUMP_H_INCLUDE__
