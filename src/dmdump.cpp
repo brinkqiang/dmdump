@@ -30,6 +30,11 @@
 #ifdef WIN32
 #define popen _popen
 #define pclose _pclose
+
+#include <windows.h>
+#include <tlhelp32.h>
+#include <stdio.h>
+
 #endif
 
 std::string DMExecute(const char* cmd)
@@ -49,9 +54,6 @@ std::string DMExecute(const char* cmd)
 }
 
 #ifdef WIN32
-#include <windows.h>
-#include <tlhelp32.h>
-#include <stdio.h>
 
 std::vector<uint64_t> DMGetProcessList(const std::string& strName)
 {
@@ -88,7 +90,6 @@ bool DMGenDumpFile(const std::string& strName)
         char cmd[256] = { 0 };
         sprintf(cmd, "procdump.exe -ma -w %d %s_%d.dmp", (int)vecList[i], strName.c_str(), (int)vecList[i]);
         std::string strData = DMExecute(cmd);
-        std::cout << strData << std::endl;
     }
 
     return true;
@@ -101,9 +102,7 @@ std::vector<uint64_t> DMGetProcessList(const std::string& strName)
 
     char cmd[256] = { 0 };
     sprintf(cmd, "pidof %s", strName.c_str());
-    std::cout << "cmd:[" << cmd << "]" << std::endl;
     std::string data = DMExecute(cmd);
-    std::cout << "result:[" << data << "]" << std::endl;
 
     strtk::std_string::token_list_type token_list;
 
@@ -132,9 +131,7 @@ bool DMGenDumpFile(const std::string& strName)
     {
         char cmd[256] = { 0 };
         sprintf(cmd, "gcore -o %s.core %d", strName.c_str(), (int)vecList[i], (int)vecList[i]);
-        std::cout << "cmd:[" << cmd << "]" << std::endl;
         std::string data = DMExecute(cmd);
-        std::cout << "result:[" << data << "]" << std::endl;
     }
 
     return true;
