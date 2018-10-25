@@ -6,7 +6,7 @@
 
 DEFINE_string(n, "zsh", "name");
 
-// dmdumptest --NAME=httpserver
+// dmdump -n zsh
 int main(int argc, char **argv) 
 {   
 	DMFLAGS_INIT(argc, argv);
