@@ -118,7 +118,7 @@ std::vector<uint64_t> DMGetProcessList(const std::string& strName)
     strtk::std_string::token_list_type::iterator it = token_list.begin();
     for (; it != token_list.end(); ++it)
     {
-        vecList.push_back(atoll(it->second));
+        vecList.push_back(atoll(it->first));
     }
 
     return vecList;
