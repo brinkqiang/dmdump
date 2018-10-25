@@ -3,7 +3,7 @@
 #include <iostream>
 
 DEFINE_uint64(AGE, 23, "age");
-DEFINE_string(NAME, "andy", "name");
+DEFINE_string(NAME, "andy", "n");
 
 // dmflagstest --AGE=36 --NAME=tom
 int main(int argc, char **argv) 
