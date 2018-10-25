@@ -103,6 +103,7 @@ std::vector<uint64_t> DMGetProcessList(const std::string& strName)
     sprintf(cmd, "pidof %s", strName.c_str());
 
     std::string data = DMExecute(cmd);
+    std::cout << data << std::endl;
 
     strtk::std_string::token_list_type token_list;
 
