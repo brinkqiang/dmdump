@@ -12,6 +12,5 @@ int main(int argc, char **argv)
 {   
 	DMFLAGS_INIT(argc, argv);
     DMGenDumpFile(FLAGS_n);
-	std::cout << "name = " << FLAGS_n << std::endl;
 	return 0;
 }

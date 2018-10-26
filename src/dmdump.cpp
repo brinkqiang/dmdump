@@ -134,6 +134,10 @@ bool DMGenDumpFile(const std::string& strName)
         char cmd[256] = { 0 };
         sprintf(cmd, "gcore -o %s.core %d", strName.c_str(), (int)vecList[i], (int)vecList[i]);
         std::string data = DMExecute(cmd);
+
+        char cmd2[256] = { 0 };
+        sprintf(cmd2, "%s.core.%d", strName.c_str(), (int)vecList[i]);
+        std::cout << cmd2 << std::endl;
     }
 
     return true;
