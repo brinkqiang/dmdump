@@ -108,18 +108,18 @@ std::vector<uint64_t> DMGetProcessList(const std::string& strName)
 
     strtk::std_string::token_list_type token_list;
 
-    const std::size_t token_count = 10;
-    const std::string delimiters(" \t");
+    std::vector<std::string> vecData;
+    const std::string delimiters("\t\r\n ");
 
-    strtk::split_n(delimiters,
-        data,
-        token_count,
-        std::back_inserter(token_list));
+    strtk::parse(data, delimiters, vecData);
 
-    strtk::std_string::token_list_type::iterator it = token_list.begin();
-    for (; it != token_list.end(); ++it)
+    for (int i=0; i < static_cast<int>(vecData.size()); ++i)
     {
-        vecList.push_back(atoll(it->first));
+        if (vecData[i].empty())
+        {
+            continue;
+        }
+        vecList.push_back(atoll(vecData[i].c_str()));
     }
 
     return vecList;

@@ -3,6 +3,7 @@
 #include "dmflags.h"
 
 #include <iostream>
+#include "dmstrtk.hpp"
 
 DEFINE_string(n, "zsh", "name");
 
@@ -12,5 +13,5 @@ int main(int argc, char **argv)
 	DMFLAGS_INIT(argc, argv);
     DMGenDumpFile(FLAGS_n);
 	std::cout << "name = " << FLAGS_n << std::endl;
-	return 0;   
+	return 0;
 }
