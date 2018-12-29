@@ -10,7 +10,7 @@ DEFINE_string(n, "zsh", "name");
 // dmdump -n zsh
 int main(int argc, char **argv) 
 {   
-	DMFLAGS_INIT(argc, argv);
+    DMFLAGS_INIT(argc, argv);
     DMGenDumpFile(FLAGS_n);
-	return 0;
+    return 0;
 }
