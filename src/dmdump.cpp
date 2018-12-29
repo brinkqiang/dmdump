@@ -134,11 +134,13 @@ bool DMGenDumpFile(const std::string& strName)
         char cmd[256] = { 0 };
         sprintf(cmd, "pstree -p -H %d", (int)vecList[i]);
         std::string data = DMExecute(cmd);
+        std::cout << cmd << std::endl;    
         std::cout << data << std::endl;
 
         char cmd2[256] = { 0 };
         sprintf(cmd2, "gcore -o %s.core %d", strName.c_str(), (int)vecList[i]);
         std::string data2 = DMExecute(cmd2);
+        std::cout << cmd2 << std::endl;   
         std::cout << data2 << std::endl;
         
         char cmd3[256] = { 0 };
