@@ -134,15 +134,13 @@ bool DMGenDumpFile(const std::string& strName)
         char cmd[256] = { 0 };
         sprintf(cmd, "pstree -p %d", (int)vecList[i]);
         std::string data = DMExecute(cmd);
-        std::cout << cmd << std::endl;    
-        std::cout << data << std::endl;
+        std::cout << data;
 
         char cmd2[256] = { 0 };
         sprintf(cmd2, "gcore -o %s.core %d", strName.c_str(), (int)vecList[i]);
         std::string data2 = DMExecute(cmd2);
-        std::cout << cmd2 << std::endl;   
-        std::cout << data2 << std::endl;
-        
+        std::cout << data2;
+
         char cmd3[256] = { 0 };
         sprintf(cmd3, "%s.core.%d", strName.c_str(), (int)vecList[i]);
         std::cout << cmd3 << std::endl;
