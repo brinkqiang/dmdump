@@ -43,7 +43,7 @@ std::string DMExecute(const char* cmd)
 {
     std::string result;
 
-    std::shared_ptr<FILE> pipe(popen(cmd, "rb"), pclose);
+    std::shared_ptr<FILE> pipe(popen(cmd, "rt"), pclose);
 
     if (!pipe) return result;
 
