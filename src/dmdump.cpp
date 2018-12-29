@@ -132,7 +132,7 @@ bool DMGenDumpFile(const std::string& strName)
     for (int i = 0; i < vecList.size(); ++i)
     {
         char cmd[256] = { 0 };
-        sprintf(cmd, "pstree -p -H %d", (int)vecList[i]);
+        sprintf(cmd, "pstree -p %d", (int)vecList[i]);
         std::string data = DMExecute(cmd);
         std::cout << cmd << std::endl;    
         std::cout << data << std::endl;
