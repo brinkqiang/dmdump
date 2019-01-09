@@ -26,9 +26,9 @@ ELSEIF (APPLE)
     MESSAGE(STATUS "Now is Apple systems")  
 
     SET(DMOS_NAME "mac") 
-
+    ADD_COMPILE_OPTIONS(-Wl -Bstatic)
+    #ADD_COMPILE_OPTIONS(-Wl -Bdynamic)
     SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread" )
-    SET( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static" )
 ELSEIF (UNIX)
     MESSAGE(STATUS "Now is UNIX-like OS")  
  
