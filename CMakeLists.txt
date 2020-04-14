@@ -14,7 +14,7 @@ LibImport("dmdump_module" "src/dmdump_module")
 
 ModuleImport("dmflags" "thirdparty/dmflags")
 
-ExeImport("test" "dmdump_module")
+ExeImport("test" "dmdump_module;dmflags")
 
 #ADD_CUSTOM_COMMAND(
 #TARGET dmdumptest
