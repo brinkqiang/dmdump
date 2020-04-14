@@ -88,7 +88,7 @@
 // are, similarly, mostly hooks into the functionality described above.
 
 // This comes first to ensure we define __STDC_FORMAT_MACROS in time.
-#include <config.h>
+#include <gflags_config.h>
 #if defined(HAVE_INTTYPES_H) && !defined(__STDC_FORMAT_MACROS)
 # define __STDC_FORMAT_MACROS 1   // gcc requires this to get PRId64, etc.
 #endif
@@ -177,14 +177,17 @@ enum DieWhenReporting { DIE, DO_NOT_DIE };
 
 // Report Error and exit if requested.
 static void ReportError(DieWhenReporting should_die, const char* format, ...) {
-  char error_message[255];
-  va_list ap;
-  va_start(ap, format);
-  vsnprintf(error_message, sizeof(error_message), format, ap);
-  va_end(ap);
-  fprintf(stderr, "%s", error_message);
-  fflush(stderr);   // should be unnecessary, but cygwin's rxvt buffers stderr
-  if (should_die == DIE) gflags_exitfunc(1);
+    char error_message[255];
+    va_list ap;
+    va_start(ap, format);
+    vsnprintf(error_message, sizeof(error_message), format, ap);
+    va_end(ap);
+    fprintf(stderr, "%s", error_message);
+    fflush(stderr);   // should be unnecessary, but cygwin's rxvt buffers stderr
+
+    if (should_die == DIE) {
+        gflags_exitfunc(1);
+    }
 }
 
 
@@ -197,48 +200,48 @@ static void ReportError(DieWhenReporting should_die, const char* format, ...) {
 
 class CommandLineFlag;
 class FlagValue {
- public:
-  FlagValue(void* valbuf, const char* type, bool transfer_ownership_of_value);
-  ~FlagValue();
+  public:
+    FlagValue(void* valbuf, const char* type, bool transfer_ownership_of_value);
+    ~FlagValue();
 
-  bool ParseFrom(const char* spec);
-  string ToString() const;
+    bool ParseFrom(const char* spec);
+    string ToString() const;
 
- private:
-  friend class CommandLineFlag;  // for many things, including Validate()
-  friend class GOOGLE_NAMESPACE::FlagSaverImpl;  // calls New()
-  friend class FlagRegistry;     // checks value_buffer_ for flags_by_ptr_ map
-  template <typename T> friend T GetFromEnv(const char*, const char*, T);
-  friend bool TryParseLocked(const CommandLineFlag*, FlagValue*,
-                             const char*, string*);  // for New(), CopyFrom()
+  private:
+    friend class CommandLineFlag;  // for many things, including Validate()
+    friend class GOOGLE_NAMESPACE::FlagSaverImpl;  // calls New()
+    friend class FlagRegistry;     // checks value_buffer_ for flags_by_ptr_ map
+    template <typename T> friend T GetFromEnv(const char*, const char*, T);
+    friend bool TryParseLocked(const CommandLineFlag*, FlagValue*,
+                               const char*, string*);  // for New(), CopyFrom()
 
-  enum ValueType {
-    FV_BOOL = 0,
-    FV_INT32 = 1,
-    FV_INT64 = 2,
-    FV_UINT64 = 3,
-    FV_DOUBLE = 4,
-    FV_STRING = 5,
-    FV_MAX_INDEX = 5,
-  };
-  const char* TypeName() const;
-  bool Equal(const FlagValue& x) const;
-  FlagValue* New() const;   // creates a new one with default value
-  void CopyFrom(const FlagValue& x);
-  int ValueSize() const;
+    enum ValueType {
+        FV_BOOL = 0,
+        FV_INT32 = 1,
+        FV_INT64 = 2,
+        FV_UINT64 = 3,
+        FV_DOUBLE = 4,
+        FV_STRING = 5,
+        FV_MAX_INDEX = 5,
+    };
+    const char* TypeName() const;
+    bool Equal(const FlagValue& x) const;
+    FlagValue* New() const;   // creates a new one with default value
+    void CopyFrom(const FlagValue& x);
+    int ValueSize() const;
 
-  // Calls the given validate-fn on value_buffer_, and returns
-  // whatever it returns.  But first casts validate_fn_proto to a
-  // function that takes our value as an argument (eg void
-  // (*validate_fn)(bool) for a bool flag).
-  bool Validate(const char* flagname, ValidateFnProto validate_fn_proto) const;
+    // Calls the given validate-fn on value_buffer_, and returns
+    // whatever it returns.  But first casts validate_fn_proto to a
+    // function that takes our value as an argument (eg void
+    // (*validate_fn)(bool) for a bool flag).
+    bool Validate(const char* flagname, ValidateFnProto validate_fn_proto) const;
 
-  void* value_buffer_;          // points to the buffer holding our data
-  int8 type_;                   // how to interpret value_
-  bool owns_value_;         // whether to free value on destruct
+    void* value_buffer_;          // points to the buffer holding our data
+    int8 type_;                   // how to interpret value_
+    bool owns_value_;         // whether to free value on destruct
 
-  FlagValue(const FlagValue&);   // no copying!
-  void operator=(const FlagValue&);
+    FlagValue(const FlagValue&);   // no copying!
+    void operator=(const FlagValue&);
 };
 
 
@@ -252,219 +255,342 @@ FlagValue::FlagValue(void* valbuf, const char* type,
                      bool transfer_ownership_of_value)
     : value_buffer_(valbuf),
       owns_value_(transfer_ownership_of_value) {
-  for (type_ = 0; type_ <= FV_MAX_INDEX; ++type_) {
-    if (!strcmp(type, TypeName())) {
-      break;
+    for (type_ = 0; type_ <= FV_MAX_INDEX; ++type_) {
+        if (!strcmp(type, TypeName())) {
+            break;
+        }
     }
-  }
-  assert(type_ <= FV_MAX_INDEX);  // Unknown typename
+
+    assert(type_ <= FV_MAX_INDEX);  // Unknown typename
 }
 
 FlagValue::~FlagValue() {
-  if (!owns_value_) {
-    return;
-  }
-  switch (type_) {
-    case FV_BOOL: delete reinterpret_cast<bool*>(value_buffer_); break;
-    case FV_INT32: delete reinterpret_cast<int32*>(value_buffer_); break;
-    case FV_INT64: delete reinterpret_cast<int64*>(value_buffer_); break;
-    case FV_UINT64: delete reinterpret_cast<uint64*>(value_buffer_); break;
-    case FV_DOUBLE: delete reinterpret_cast<double*>(value_buffer_); break;
-    case FV_STRING: delete reinterpret_cast<string*>(value_buffer_); break;
-  }
+    if (!owns_value_) {
+        return;
+    }
+
+    switch (type_) {
+    case FV_BOOL:
+        delete reinterpret_cast<bool*>(value_buffer_);
+        break;
+
+    case FV_INT32:
+        delete reinterpret_cast<int32*>(value_buffer_);
+        break;
+
+    case FV_INT64:
+        delete reinterpret_cast<int64*>(value_buffer_);
+        break;
+
+    case FV_UINT64:
+        delete reinterpret_cast<uint64*>(value_buffer_);
+        break;
+
+    case FV_DOUBLE:
+        delete reinterpret_cast<double*>(value_buffer_);
+        break;
+
+    case FV_STRING:
+        delete reinterpret_cast<string*>(value_buffer_);
+        break;
+    }
 }
 
 bool FlagValue::ParseFrom(const char* value) {
-  if (type_ == FV_BOOL) {
-    const char* kTrue[] = { "1", "t", "true", "y", "yes" };
-    const char* kFalse[] = { "0", "f", "false", "n", "no" };
-    COMPILE_ASSERT(sizeof(kTrue) == sizeof(kFalse), true_false_equal);
-    for (size_t i = 0; i < sizeof(kTrue)/sizeof(*kTrue); ++i) {
-      if (strcasecmp(value, kTrue[i]) == 0) {
-        SET_VALUE_AS(bool, true);
-        return true;
-      } else if (strcasecmp(value, kFalse[i]) == 0) {
-        SET_VALUE_AS(bool, false);
-        return true;
-      }
+    if (type_ == FV_BOOL) {
+        const char* kTrue[] = { "1", "t", "true", "y", "yes" };
+        const char* kFalse[] = { "0", "f", "false", "n", "no" };
+        COMPILE_ASSERT(sizeof(kTrue) == sizeof(kFalse), true_false_equal);
+
+        for (size_t i = 0; i < sizeof(kTrue)/sizeof(*kTrue); ++i) {
+            if (strcasecmp(value, kTrue[i]) == 0) {
+                SET_VALUE_AS(bool, true);
+                return true;
+            }
+            else if (strcasecmp(value, kFalse[i]) == 0) {
+                SET_VALUE_AS(bool, false);
+                return true;
+            }
+        }
+
+        return false;   // didn't match a legal input
+
     }
-    return false;   // didn't match a legal input
+    else if (type_ == FV_STRING) {
+        SET_VALUE_AS(string, value);
+        return true;
+    }
 
-  } else if (type_ == FV_STRING) {
-    SET_VALUE_AS(string, value);
-    return true;
-  }
-
-  // OK, it's likely to be numeric, and we'll be using a strtoXXX method.
-  if (value[0] == '\0')   // empty-string is only allowed for string type.
-    return false;
-  char* end;
-  // Leading 0x puts us in base 16.  But leading 0 does not put us in base 8!
-  // It caused too many bugs when we had that behavior.
-  int base = 10;    // by default
-  if (value[0] == '0' && (value[1] == 'x' || value[1] == 'X'))
-    base = 16;
-  errno = 0;
-
-  switch (type_) {
-    case FV_INT32: {
-      const int64 r = strto64(value, &end, base);
-      if (errno || end != value + strlen(value))  return false;  // bad parse
-      if (static_cast<int32>(r) != r)  // worked, but number out of range
+    // OK, it's likely to be numeric, and we'll be using a strtoXXX method.
+    if (value[0] == '\0') { // empty-string is only allowed for string type.
         return false;
-      SET_VALUE_AS(int32, static_cast<int32>(r));
-      return true;
     }
+
+    char* end;
+    // Leading 0x puts us in base 16.  But leading 0 does not put us in base 8!
+    // It caused too many bugs when we had that behavior.
+    int base = 10;    // by default
+
+    if (value[0] == '0' && (value[1] == 'x' || value[1] == 'X')) {
+        base = 16;
+    }
+
+    errno = 0;
+
+    switch (type_) {
+    case FV_INT32: {
+        const int64 r = strto64(value, &end, base);
+
+        if (errno || end != value + strlen(value)) {
+            return false;    // bad parse
+        }
+
+        if (static_cast<int32>(r) != r) { // worked, but number out of range
+            return false;
+        }
+
+        SET_VALUE_AS(int32, static_cast<int32>(r));
+        return true;
+    }
+
     case FV_INT64: {
-      const int64 r = strto64(value, &end, base);
-      if (errno || end != value + strlen(value))  return false;  // bad parse
-      SET_VALUE_AS(int64, r);
-      return true;
+        const int64 r = strto64(value, &end, base);
+
+        if (errno || end != value + strlen(value)) {
+            return false;    // bad parse
+        }
+
+        SET_VALUE_AS(int64, r);
+        return true;
     }
+
     case FV_UINT64: {
-      while (*value == ' ') value++;
-      if (*value == '-') return false;  // negative number
-      const uint64 r = strtou64(value, &end, base);
-      if (errno || end != value + strlen(value))  return false;  // bad parse
-      SET_VALUE_AS(uint64, r);
-      return true;
+        while (*value == ' ') {
+            value++;
+        }
+
+        if (*value == '-') {
+            return false;    // negative number
+        }
+
+        const uint64 r = strtou64(value, &end, base);
+
+        if (errno || end != value + strlen(value)) {
+            return false;    // bad parse
+        }
+
+        SET_VALUE_AS(uint64, r);
+        return true;
     }
+
     case FV_DOUBLE: {
-      const double r = strtod(value, &end);
-      if (errno || end != value + strlen(value))  return false;  // bad parse
-      SET_VALUE_AS(double, r);
-      return true;
+        const double r = strtod(value, &end);
+
+        if (errno || end != value + strlen(value)) {
+            return false;    // bad parse
+        }
+
+        SET_VALUE_AS(double, r);
+        return true;
     }
+
     default: {
-      assert(false);  // unknown type
-      return false;
+        assert(false);  // unknown type
+        return false;
     }
-  }
+    }
 }
 
 string FlagValue::ToString() const {
-  char intbuf[64];    // enough to hold even the biggest number
-  switch (type_) {
+    char intbuf[64];    // enough to hold even the biggest number
+
+    switch (type_) {
     case FV_BOOL:
-      return VALUE_AS(bool) ? "true" : "false";
+        return VALUE_AS(bool) ? "true" : "false";
+
     case FV_INT32:
-      snprintf(intbuf, sizeof(intbuf), "%" PRId32, VALUE_AS(int32));
-      return intbuf;
+        snprintf(intbuf, sizeof(intbuf), "%" PRId32, VALUE_AS(int32));
+        return intbuf;
+
     case FV_INT64:
-      snprintf(intbuf, sizeof(intbuf), "%" PRId64, VALUE_AS(int64));
-      return intbuf;
+        snprintf(intbuf, sizeof(intbuf), "%" PRId64, VALUE_AS(int64));
+        return intbuf;
+
     case FV_UINT64:
-      snprintf(intbuf, sizeof(intbuf), "%" PRIu64, VALUE_AS(uint64));
-      return intbuf;
+        snprintf(intbuf, sizeof(intbuf), "%" PRIu64, VALUE_AS(uint64));
+        return intbuf;
+
     case FV_DOUBLE:
-      snprintf(intbuf, sizeof(intbuf), "%.17g", VALUE_AS(double));
-      return intbuf;
+        snprintf(intbuf, sizeof(intbuf), "%.17g", VALUE_AS(double));
+        return intbuf;
+
     case FV_STRING:
-      return VALUE_AS(string);
+        return VALUE_AS(string);
+
     default:
-      assert(false);
-      return "";  // unknown type
-  }
+        assert(false);
+        return "";  // unknown type
+    }
 }
 
 bool FlagValue::Validate(const char* flagname,
                          ValidateFnProto validate_fn_proto) const {
-  switch (type_) {
+    switch (type_) {
     case FV_BOOL:
-      return reinterpret_cast<bool (*)(const char*, bool)>(
-          validate_fn_proto)(flagname, VALUE_AS(bool));
+        return reinterpret_cast<bool (*)(const char*, bool)>(
+                   validate_fn_proto)(flagname, VALUE_AS(bool));
+
     case FV_INT32:
-      return reinterpret_cast<bool (*)(const char*, int32)>(
-          validate_fn_proto)(flagname, VALUE_AS(int32));
+        return reinterpret_cast<bool (*)(const char*, int32)>(
+                   validate_fn_proto)(flagname, VALUE_AS(int32));
+
     case FV_INT64:
-      return reinterpret_cast<bool (*)(const char*, int64)>(
-          validate_fn_proto)(flagname, VALUE_AS(int64));
+        return reinterpret_cast<bool (*)(const char*, int64)>(
+                   validate_fn_proto)(flagname, VALUE_AS(int64));
+
     case FV_UINT64:
-      return reinterpret_cast<bool (*)(const char*, uint64)>(
-          validate_fn_proto)(flagname, VALUE_AS(uint64));
+        return reinterpret_cast<bool (*)(const char*, uint64)>(
+                   validate_fn_proto)(flagname, VALUE_AS(uint64));
+
     case FV_DOUBLE:
-      return reinterpret_cast<bool (*)(const char*, double)>(
-          validate_fn_proto)(flagname, VALUE_AS(double));
+        return reinterpret_cast<bool (*)(const char*, double)>(
+                   validate_fn_proto)(flagname, VALUE_AS(double));
+
     case FV_STRING:
-      return reinterpret_cast<bool (*)(const char*, const string&)>(
-          validate_fn_proto)(flagname, VALUE_AS(string));
+        return reinterpret_cast<bool (*)(const char*, const string&)>(
+                   validate_fn_proto)(flagname, VALUE_AS(string));
+
     default:
-      assert(false);  // unknown type
-      return false;
-  }
+        assert(false);  // unknown type
+        return false;
+    }
 }
 
 const char* FlagValue::TypeName() const {
-  static const char types[] =
-      "bool\0xx"
-      "int32\0x"
-      "int64\0x"
-      "uint64\0"
-      "double\0"
-      "string";
-  if (type_ > FV_MAX_INDEX) {
-    assert(false);
-    return "";
-  }
-  // Directly indexing the strigns in the 'types' string, each of them
-  // is 7 bytes long.
-  return &types[type_ * 7];
+    static const char types[] =
+        "bool\0xx"
+        "int32\0x"
+        "int64\0x"
+        "uint64\0"
+        "double\0"
+        "string";
+
+    if (type_ > FV_MAX_INDEX) {
+        assert(false);
+        return "";
+    }
+
+    // Directly indexing the strigns in the 'types' string, each of them
+    // is 7 bytes long.
+    return &types[type_ * 7];
 }
 
 bool FlagValue::Equal(const FlagValue& x) const {
-  if (type_ != x.type_)
-    return false;
-  switch (type_) {
-    case FV_BOOL:   return VALUE_AS(bool) == OTHER_VALUE_AS(x, bool);
-    case FV_INT32:  return VALUE_AS(int32) == OTHER_VALUE_AS(x, int32);
-    case FV_INT64:  return VALUE_AS(int64) == OTHER_VALUE_AS(x, int64);
-    case FV_UINT64: return VALUE_AS(uint64) == OTHER_VALUE_AS(x, uint64);
-    case FV_DOUBLE: return VALUE_AS(double) == OTHER_VALUE_AS(x, double);
-    case FV_STRING: return VALUE_AS(string) == OTHER_VALUE_AS(x, string);
-    default: assert(false); return false;  // unknown type
-  }
+    if (type_ != x.type_) {
+        return false;
+    }
+
+    switch (type_) {
+    case FV_BOOL:
+        return VALUE_AS(bool) == OTHER_VALUE_AS(x, bool);
+
+    case FV_INT32:
+        return VALUE_AS(int32) == OTHER_VALUE_AS(x, int32);
+
+    case FV_INT64:
+        return VALUE_AS(int64) == OTHER_VALUE_AS(x, int64);
+
+    case FV_UINT64:
+        return VALUE_AS(uint64) == OTHER_VALUE_AS(x, uint64);
+
+    case FV_DOUBLE:
+        return VALUE_AS(double) == OTHER_VALUE_AS(x, double);
+
+    case FV_STRING:
+        return VALUE_AS(string) == OTHER_VALUE_AS(x, string);
+
+    default:
+        assert(false);
+        return false;  // unknown type
+    }
 }
 
 FlagValue* FlagValue::New() const {
-  const char *type = TypeName();
-  switch (type_) {
-    case FV_BOOL:   return new FlagValue(new bool(false), type, true);
-    case FV_INT32:  return new FlagValue(new int32(0), type, true);
-    case FV_INT64:  return new FlagValue(new int64(0), type, true);
-    case FV_UINT64: return new FlagValue(new uint64(0), type, true);
-    case FV_DOUBLE: return new FlagValue(new double(0.0), type, true);
-    case FV_STRING: return new FlagValue(new string, type, true);
-    default: assert(false); return NULL;  // unknown type
-  }
+    const char* type = TypeName();
+
+    switch (type_) {
+    case FV_BOOL:
+        return new FlagValue(new bool(false), type, true);
+
+    case FV_INT32:
+        return new FlagValue(new int32(0), type, true);
+
+    case FV_INT64:
+        return new FlagValue(new int64(0), type, true);
+
+    case FV_UINT64:
+        return new FlagValue(new uint64(0), type, true);
+
+    case FV_DOUBLE:
+        return new FlagValue(new double(0.0), type, true);
+
+    case FV_STRING:
+        return new FlagValue(new string, type, true);
+
+    default:
+        assert(false);
+        return NULL;  // unknown type
+    }
 }
 
 void FlagValue::CopyFrom(const FlagValue& x) {
-  assert(type_ == x.type_);
-  switch (type_) {
-    case FV_BOOL:   SET_VALUE_AS(bool, OTHER_VALUE_AS(x, bool));      break;
-    case FV_INT32:  SET_VALUE_AS(int32, OTHER_VALUE_AS(x, int32));    break;
-    case FV_INT64:  SET_VALUE_AS(int64, OTHER_VALUE_AS(x, int64));    break;
-    case FV_UINT64: SET_VALUE_AS(uint64, OTHER_VALUE_AS(x, uint64));  break;
-    case FV_DOUBLE: SET_VALUE_AS(double, OTHER_VALUE_AS(x, double));  break;
-    case FV_STRING: SET_VALUE_AS(string, OTHER_VALUE_AS(x, string));  break;
-    default: assert(false);  // unknown type
-  }
+    assert(type_ == x.type_);
+
+    switch (type_) {
+    case FV_BOOL:
+        SET_VALUE_AS(bool, OTHER_VALUE_AS(x, bool));
+        break;
+
+    case FV_INT32:
+        SET_VALUE_AS(int32, OTHER_VALUE_AS(x, int32));
+        break;
+
+    case FV_INT64:
+        SET_VALUE_AS(int64, OTHER_VALUE_AS(x, int64));
+        break;
+
+    case FV_UINT64:
+        SET_VALUE_AS(uint64, OTHER_VALUE_AS(x, uint64));
+        break;
+
+    case FV_DOUBLE:
+        SET_VALUE_AS(double, OTHER_VALUE_AS(x, double));
+        break;
+
+    case FV_STRING:
+        SET_VALUE_AS(string, OTHER_VALUE_AS(x, string));
+        break;
+
+    default:
+        assert(false);  // unknown type
+    }
 }
 
 int FlagValue::ValueSize() const {
-  if (type_ > FV_MAX_INDEX) {
-    assert(false);  // unknown type
-    return 0;
-  }
-  static const uint8 valuesize[] = {
-    sizeof(bool),
-    sizeof(int32),
-    sizeof(int64),
-    sizeof(uint64),
-    sizeof(double),
-    sizeof(string),
-  };
-  return valuesize[type_];
+    if (type_ > FV_MAX_INDEX) {
+        assert(false);  // unknown type
+        return 0;
+    }
+
+    static const uint8 valuesize[] = {
+        sizeof(bool),
+        sizeof(int32),
+        sizeof(int64),
+        sizeof(uint64),
+        sizeof(double),
+        sizeof(string),
+    };
+    return valuesize[type_];
 }
 
 // --------------------------------------------------------------------
@@ -479,54 +605,72 @@ int FlagValue::ValueSize() const {
 // --------------------------------------------------------------------
 
 class CommandLineFlag {
- public:
-  // Note: we take over memory-ownership of current_val and default_val.
-  CommandLineFlag(const char* name, const char* help, const char* filename,
-                  FlagValue* current_val, FlagValue* default_val);
-  ~CommandLineFlag();
+  public:
+    // Note: we take over memory-ownership of current_val and default_val.
+    CommandLineFlag(const char* name, const char* help, const char* filename,
+                    FlagValue* current_val, FlagValue* default_val);
+    ~CommandLineFlag();
 
-  const char* name() const { return name_; }
-  const char* help() const { return help_; }
-  const char* filename() const { return file_; }
-  const char* CleanFileName() const;  // nixes irrelevant prefix such as homedir
-  string current_value() const { return current_->ToString(); }
-  string default_value() const { return defvalue_->ToString(); }
-  const char* type_name() const { return defvalue_->TypeName(); }
-  ValidateFnProto validate_function() const { return validate_fn_proto_; }
-  const void* flag_ptr() const { return current_->value_buffer_; }
+    const char* name() const {
+        return name_;
+    }
+    const char* help() const {
+        return help_;
+    }
+    const char* filename() const {
+        return file_;
+    }
+    const char* CleanFileName() const;  // nixes irrelevant prefix such as homedir
+    string current_value() const {
+        return current_->ToString();
+    }
+    string default_value() const {
+        return defvalue_->ToString();
+    }
+    const char* type_name() const {
+        return defvalue_->TypeName();
+    }
+    ValidateFnProto validate_function() const {
+        return validate_fn_proto_;
+    }
+    const void* flag_ptr() const {
+        return current_->value_buffer_;
+    }
 
-  void FillCommandLineFlagInfo(struct CommandLineFlagInfo* result);
+    void FillCommandLineFlagInfo(struct CommandLineFlagInfo* result);
 
-  // If validate_fn_proto_ is non-NULL, calls it on value, returns result.
-  bool Validate(const FlagValue& value) const;
-  bool ValidateCurrent() const { return Validate(*current_); }
+    // If validate_fn_proto_ is non-NULL, calls it on value, returns result.
+    bool Validate(const FlagValue& value) const;
+    bool ValidateCurrent() const {
+        return Validate(*current_);
+    }
 
- private:
-  // for SetFlagLocked() and setting flags_by_ptr_
-  friend class FlagRegistry;
-  friend class GOOGLE_NAMESPACE::FlagSaverImpl;  // for cloning the values
-  // set validate_fn
-  friend bool AddFlagValidator(const void*, ValidateFnProto);
+  private:
+    // for SetFlagLocked() and setting flags_by_ptr_
+    friend class FlagRegistry;
+    friend class GOOGLE_NAMESPACE::FlagSaverImpl;  // for cloning the values
+    // set validate_fn
+    friend bool AddFlagValidator(const void*, ValidateFnProto);
 
-  // This copies all the non-const members: modified, processed, defvalue, etc.
-  void CopyFrom(const CommandLineFlag& src);
+    // This copies all the non-const members: modified, processed, defvalue, etc.
+    void CopyFrom(const CommandLineFlag& src);
 
-  void UpdateModifiedBit();
+    void UpdateModifiedBit();
 
-  const char* const name_;     // Flag name
-  const char* const help_;     // Help message
-  const char* const file_;     // Which file did this come from?
-  bool modified_;              // Set after default assignment?
-  FlagValue* defvalue_;        // Default value for flag
-  FlagValue* current_;         // Current value for flag
-  // This is a casted, 'generic' version of validate_fn, which actually
-  // takes a flag-value as an arg (void (*validate_fn)(bool), say).
-  // When we pass this to current_->Validate(), it will cast it back to
-  // the proper type.  This may be NULL to mean we have no validate_fn.
-  ValidateFnProto validate_fn_proto_;
+    const char* const name_;     // Flag name
+    const char* const help_;     // Help message
+    const char* const file_;     // Which file did this come from?
+    bool modified_;              // Set after default assignment?
+    FlagValue* defvalue_;        // Default value for flag
+    FlagValue* current_;         // Current value for flag
+    // This is a casted, 'generic' version of validate_fn, which actually
+    // takes a flag-value as an arg (void (*validate_fn)(bool), say).
+    // When we pass this to current_->Validate(), it will cast it back to
+    // the proper type.  This may be NULL to mean we have no validate_fn.
+    ValidateFnProto validate_fn_proto_;
 
-  CommandLineFlag(const CommandLineFlag&);   // no copying!
-  void operator=(const CommandLineFlag&);
+    CommandLineFlag(const CommandLineFlag&);   // no copying!
+    void operator=(const CommandLineFlag&);
 };
 
 CommandLineFlag::CommandLineFlag(const char* name, const char* help,
@@ -537,70 +681,89 @@ CommandLineFlag::CommandLineFlag(const char* name, const char* help,
 }
 
 CommandLineFlag::~CommandLineFlag() {
-  delete current_;
-  delete defvalue_;
+    delete current_;
+    delete defvalue_;
 }
 
 const char* CommandLineFlag::CleanFileName() const {
-  // Compute top-level directory & file that this appears in
-  // search full path backwards.
-  // Stop going backwards at kRootDir; and skip by the first slash.
-  static const char kRootDir[] = "";    // can set this to root directory,
+    // Compute top-level directory & file that this appears in
+    // search full path backwards.
+    // Stop going backwards at kRootDir; and skip by the first slash.
+    static const char kRootDir[] = "";    // can set this to root directory,
 
-  if (sizeof(kRootDir)-1 == 0)          // no prefix to strip
-    return filename();
-
-  const char* clean_name = filename() + strlen(filename()) - 1;
-  while ( clean_name > filename() ) {
-    if (*clean_name == PATH_SEPARATOR) {
-      if (strncmp(clean_name, kRootDir, sizeof(kRootDir)-1) == 0) {
-        clean_name += sizeof(kRootDir)-1;    // past root-dir
-        break;
-      }
+    if (sizeof(kRootDir)-1 == 0) {        // no prefix to strip
+        return filename();
     }
-    --clean_name;
-  }
-  while ( *clean_name == PATH_SEPARATOR ) ++clean_name;  // Skip any slashes
-  return clean_name;
+
+    const char* clean_name = filename() + strlen(filename()) - 1;
+
+    while ( clean_name > filename() ) {
+        if (*clean_name == PATH_SEPARATOR) {
+            if (strncmp(clean_name, kRootDir, sizeof(kRootDir)-1) == 0) {
+                clean_name += sizeof(kRootDir)-1;    // past root-dir
+                break;
+            }
+        }
+
+        --clean_name;
+    }
+
+    while ( *clean_name == PATH_SEPARATOR ) {
+        ++clean_name;    // Skip any slashes
+    }
+
+    return clean_name;
 }
 
 void CommandLineFlag::FillCommandLineFlagInfo(
     CommandLineFlagInfo* result) {
-  result->name = name();
-  result->type = type_name();
-  result->description = help();
-  result->current_value = current_value();
-  result->default_value = default_value();
-  result->filename = CleanFileName();
-  UpdateModifiedBit();
-  result->is_default = !modified_;
-  result->has_validator_fn = validate_function() != NULL;
-  result->flag_ptr = flag_ptr();
+    result->name = name();
+    result->type = type_name();
+    result->description = help();
+    result->current_value = current_value();
+    result->default_value = default_value();
+    result->filename = CleanFileName();
+    UpdateModifiedBit();
+    result->is_default = !modified_;
+    result->has_validator_fn = validate_function() != NULL;
+    result->flag_ptr = flag_ptr();
 }
 
 void CommandLineFlag::UpdateModifiedBit() {
-  // Update the "modified" bit in case somebody bypassed the
-  // Flags API and wrote directly through the FLAGS_name variable.
-  if (!modified_ && !current_->Equal(*defvalue_)) {
-    modified_ = true;
-  }
+    // Update the "modified" bit in case somebody bypassed the
+    // Flags API and wrote directly through the FLAGS_name variable.
+    if (!modified_ && !current_->Equal(*defvalue_)) {
+        modified_ = true;
+    }
 }
 
 void CommandLineFlag::CopyFrom(const CommandLineFlag& src) {
-  // Note we only copy the non-const members; others are fixed at construct time
-  if (modified_ != src.modified_) modified_ = src.modified_;
-  if (!current_->Equal(*src.current_)) current_->CopyFrom(*src.current_);
-  if (!defvalue_->Equal(*src.defvalue_)) defvalue_->CopyFrom(*src.defvalue_);
-  if (validate_fn_proto_ != src.validate_fn_proto_)
-    validate_fn_proto_ = src.validate_fn_proto_;
+    // Note we only copy the non-const members; others are fixed at construct time
+    if (modified_ != src.modified_) {
+        modified_ = src.modified_;
+    }
+
+    if (!current_->Equal(*src.current_)) {
+        current_->CopyFrom(*src.current_);
+    }
+
+    if (!defvalue_->Equal(*src.defvalue_)) {
+        defvalue_->CopyFrom(*src.defvalue_);
+    }
+
+    if (validate_fn_proto_ != src.validate_fn_proto_) {
+        validate_fn_proto_ = src.validate_fn_proto_;
+    }
 }
 
 bool CommandLineFlag::Validate(const FlagValue& value) const {
 
-  if (validate_function() == NULL)
-    return true;
-  else
-    return value.Validate(name(), validate_function());
+    if (validate_function() == NULL) {
+        return true;
+    }
+    else {
+        return value.Validate(name(), validate_function());
+    }
 }
 
 
@@ -615,273 +778,316 @@ bool CommandLineFlag::Validate(const FlagValue& value) const {
 // --------------------------------------------------------------------
 
 struct StringCmp {  // Used by the FlagRegistry map class to compare char*'s
-  bool operator() (const char* s1, const char* s2) const {
-    return (strcmp(s1, s2) < 0);
-  }
+    bool operator() (const char* s1, const char* s2) const {
+        return (strcmp(s1, s2) < 0);
+    }
 };
 
 
 class FlagRegistry {
- public:
-  FlagRegistry() {
-  }
-  ~FlagRegistry() {
-    // Not using STLDeleteElements as that resides in util and this
-    // class is base.
-    for (FlagMap::iterator p = flags_.begin(), e = flags_.end(); p != e; ++p) {
-      CommandLineFlag* flag = p->second;
-      delete flag;
+  public:
+    FlagRegistry() {
     }
-  }
+    ~FlagRegistry() {
+        // Not using STLDeleteElements as that resides in util and this
+        // class is base.
+        for (FlagMap::iterator p = flags_.begin(), e = flags_.end(); p != e; ++p) {
+            CommandLineFlag* flag = p->second;
+            delete flag;
+        }
+    }
 
-  static void DeleteGlobalRegistry() {
-    delete global_registry_;
-    global_registry_ = NULL;
-  }
+    static void DeleteGlobalRegistry() {
+        delete global_registry_;
+        global_registry_ = NULL;
+    }
 
-  // Store a flag in this registry.  Takes ownership of the given pointer.
-  void RegisterFlag(CommandLineFlag* flag);
+    // Store a flag in this registry.  Takes ownership of the given pointer.
+    void RegisterFlag(CommandLineFlag* flag);
 
-  void Lock() { lock_.Lock(); }
-  void Unlock() { lock_.Unlock(); }
+    void Lock() {
+        lock_.Lock();
+    }
+    void Unlock() {
+        lock_.Unlock();
+    }
 
-  // Returns the flag object for the specified name, or NULL if not found.
-  CommandLineFlag* FindFlagLocked(const char* name);
+    // Returns the flag object for the specified name, or NULL if not found.
+    CommandLineFlag* FindFlagLocked(const char* name);
 
-  // Returns the flag object whose current-value is stored at flag_ptr.
-  // That is, for whom current_->value_buffer_ == flag_ptr
-  CommandLineFlag* FindFlagViaPtrLocked(const void* flag_ptr);
+    // Returns the flag object whose current-value is stored at flag_ptr.
+    // That is, for whom current_->value_buffer_ == flag_ptr
+    CommandLineFlag* FindFlagViaPtrLocked(const void* flag_ptr);
 
-  // A fancier form of FindFlag that works correctly if name is of the
-  // form flag=value.  In that case, we set key to point to flag, and
-  // modify v to point to the value (if present), and return the flag
-  // with the given name.  If the flag does not exist, returns NULL
-  // and sets error_message.
-  CommandLineFlag* SplitArgumentLocked(const char* argument,
-                                       string* key, const char** v,
-                                       string* error_message);
+    // A fancier form of FindFlag that works correctly if name is of the
+    // form flag=value.  In that case, we set key to point to flag, and
+    // modify v to point to the value (if present), and return the flag
+    // with the given name.  If the flag does not exist, returns NULL
+    // and sets error_message.
+    CommandLineFlag* SplitArgumentLocked(const char* argument,
+                                         string* key, const char** v,
+                                         string* error_message);
 
-  // Set the value of a flag.  If the flag was successfully set to
-  // value, set msg to indicate the new flag-value, and return true.
-  // Otherwise, set msg to indicate the error, leave flag unchanged,
-  // and return false.  msg can be NULL.
-  bool SetFlagLocked(CommandLineFlag* flag, const char* value,
-                     FlagSettingMode set_mode, string* msg);
+    // Set the value of a flag.  If the flag was successfully set to
+    // value, set msg to indicate the new flag-value, and return true.
+    // Otherwise, set msg to indicate the error, leave flag unchanged,
+    // and return false.  msg can be NULL.
+    bool SetFlagLocked(CommandLineFlag* flag, const char* value,
+                       FlagSettingMode set_mode, string* msg);
 
-  static FlagRegistry* GlobalRegistry();   // returns a singleton registry
+    static FlagRegistry* GlobalRegistry();   // returns a singleton registry
 
- private:
-  friend class GOOGLE_NAMESPACE::FlagSaverImpl;  // reads all the flags in order to copy them
-  friend class CommandLineFlagParser;    // for ValidateAllFlags
-  friend void GOOGLE_NAMESPACE::GetAllFlags(vector<CommandLineFlagInfo>*);
+  private:
+    friend class
+        GOOGLE_NAMESPACE::FlagSaverImpl;  // reads all the flags in order to copy them
+    friend class CommandLineFlagParser;    // for ValidateAllFlags
+    friend void GOOGLE_NAMESPACE::GetAllFlags(vector<CommandLineFlagInfo>*);
 
-  // The map from name to flag, for FindFlagLocked().
-  typedef map<const char*, CommandLineFlag*, StringCmp> FlagMap;
-  typedef FlagMap::iterator FlagIterator;
-  typedef FlagMap::const_iterator FlagConstIterator;
-  FlagMap flags_;
+    // The map from name to flag, for FindFlagLocked().
+    typedef map<const char*, CommandLineFlag*, StringCmp> FlagMap;
+    typedef FlagMap::iterator FlagIterator;
+    typedef FlagMap::const_iterator FlagConstIterator;
+    FlagMap flags_;
 
-  // The map from current-value pointer to flag, fo FindFlagViaPtrLocked().
-  typedef map<const void*, CommandLineFlag*> FlagPtrMap;
-  FlagPtrMap flags_by_ptr_;
+    // The map from current-value pointer to flag, fo FindFlagViaPtrLocked().
+    typedef map<const void*, CommandLineFlag*> FlagPtrMap;
+    FlagPtrMap flags_by_ptr_;
 
-  static FlagRegistry* global_registry_;   // a singleton registry
+    static FlagRegistry* global_registry_;   // a singleton registry
 
-  Mutex lock_;
-  static Mutex global_registry_lock_;
+    Mutex lock_;
+    static Mutex global_registry_lock_;
 
-  static void InitGlobalRegistry();
+    static void InitGlobalRegistry();
 
-  // Disallow
-  FlagRegistry(const FlagRegistry&);
-  FlagRegistry& operator=(const FlagRegistry&);
+    // Disallow
+    FlagRegistry(const FlagRegistry&);
+    FlagRegistry& operator=(const FlagRegistry&);
 };
 
 class FlagRegistryLock {
- public:
-  explicit FlagRegistryLock(FlagRegistry* fr) : fr_(fr) { fr_->Lock(); }
-  ~FlagRegistryLock() { fr_->Unlock(); }
- private:
-  FlagRegistry *const fr_;
+  public:
+    explicit FlagRegistryLock(FlagRegistry* fr) : fr_(fr) {
+        fr_->Lock();
+    }
+    ~FlagRegistryLock() {
+        fr_->Unlock();
+    }
+  private:
+    FlagRegistry* const fr_;
 };
 
 
 void FlagRegistry::RegisterFlag(CommandLineFlag* flag) {
-  Lock();
-  pair<FlagIterator, bool> ins =
-    flags_.insert(pair<const char*, CommandLineFlag*>(flag->name(), flag));
-  if (ins.second == false) {   // means the name was already in the map
-    if (strcmp(ins.first->second->filename(), flag->filename()) != 0) {
-      ReportError(DIE, "ERROR: flag '%s' was defined more than once "
-                  "(in files '%s' and '%s').\n",
-                  flag->name(),
-                  ins.first->second->filename(),
-                  flag->filename());
-    } else {
-      ReportError(DIE, "ERROR: something wrong with flag '%s' in file '%s'.  "
-                  "One possibility: file '%s' is being linked both statically "
-                  "and dynamically into this executable.\n",
-                  flag->name(),
-                  flag->filename(), flag->filename());
+    Lock();
+    pair<FlagIterator, bool> ins =
+        flags_.insert(pair<const char*, CommandLineFlag*>(flag->name(), flag));
+
+    if (ins.second == false) {   // means the name was already in the map
+        if (strcmp(ins.first->second->filename(), flag->filename()) != 0) {
+            ReportError(DIE, "ERROR: flag '%s' was defined more than once "
+                        "(in files '%s' and '%s').\n",
+                        flag->name(),
+                        ins.first->second->filename(),
+                        flag->filename());
+        }
+        else {
+            ReportError(DIE, "ERROR: something wrong with flag '%s' in file '%s'.  "
+                        "One possibility: file '%s' is being linked both statically "
+                        "and dynamically into this executable.\n",
+                        flag->name(),
+                        flag->filename(), flag->filename());
+        }
     }
-  }
-  // Also add to the flags_by_ptr_ map.
-  flags_by_ptr_[flag->current_->value_buffer_] = flag;
-  Unlock();
+
+    // Also add to the flags_by_ptr_ map.
+    flags_by_ptr_[flag->current_->value_buffer_] = flag;
+    Unlock();
 }
 
 CommandLineFlag* FlagRegistry::FindFlagLocked(const char* name) {
-  FlagConstIterator i = flags_.find(name);
-  if (i == flags_.end()) {
-    return NULL;
-  } else {
-    return i->second;
-  }
+    FlagConstIterator i = flags_.find(name);
+
+    if (i == flags_.end()) {
+        return NULL;
+    }
+    else {
+        return i->second;
+    }
 }
 
 CommandLineFlag* FlagRegistry::FindFlagViaPtrLocked(const void* flag_ptr) {
-  FlagPtrMap::const_iterator i = flags_by_ptr_.find(flag_ptr);
-  if (i == flags_by_ptr_.end()) {
-    return NULL;
-  } else {
-    return i->second;
-  }
+    FlagPtrMap::const_iterator i = flags_by_ptr_.find(flag_ptr);
+
+    if (i == flags_by_ptr_.end()) {
+        return NULL;
+    }
+    else {
+        return i->second;
+    }
 }
 
 CommandLineFlag* FlagRegistry::SplitArgumentLocked(const char* arg,
-                                                   string* key,
-                                                   const char** v,
-                                                   string* error_message) {
-  // Find the flag object for this option
-  const char* flag_name;
-  const char* value = strchr(arg, '=');
-  if (value == NULL) {
-    key->assign(arg);
-    *v = NULL;
-  } else {
-    // Strip out the "=value" portion from arg
-    key->assign(arg, value-arg);
-    *v = ++value;    // advance past the '='
-  }
-  flag_name = key->c_str();
+        string* key,
+        const char** v,
+        string* error_message) {
+    // Find the flag object for this option
+    const char* flag_name;
+    const char* value = strchr(arg, '=');
 
-  CommandLineFlag* flag = FindFlagLocked(flag_name);
-
-  if (flag == NULL) {
-    // If we can't find the flag-name, then we should return an error.
-    // The one exception is if 1) the flag-name is 'nox', 2) there
-    // exists a flag named 'x', and 3) 'x' is a boolean flag.
-    // In that case, we want to return flag 'x'.
-    if (!(flag_name[0] == 'n' && flag_name[1] == 'o')) {
-      // flag-name is not 'nox', so we're not in the exception case.
-      *error_message = StringPrintf("%sunknown command line flag '%s'\n",
-                                    kError, key->c_str());
-      return NULL;
+    if (value == NULL) {
+        key->assign(arg);
+        *v = NULL;
     }
-    flag = FindFlagLocked(flag_name+2);
+    else {
+        // Strip out the "=value" portion from arg
+        key->assign(arg, value-arg);
+        *v = ++value;    // advance past the '='
+    }
+
+    flag_name = key->c_str();
+
+    CommandLineFlag* flag = FindFlagLocked(flag_name);
+
     if (flag == NULL) {
-      // No flag named 'x' exists, so we're not in the exception case.
-      *error_message = StringPrintf("%sunknown command line flag '%s'\n",
-                                    kError, key->c_str());
-      return NULL;
-    }
-    if (strcmp(flag->type_name(), "bool") != 0) {
-      // 'x' exists but is not boolean, so we're not in the exception case.
-      *error_message = StringPrintf(
-          "%sboolean value (%s) specified for %s command line flag\n",
-          kError, key->c_str(), flag->type_name());
-      return NULL;
-    }
-    // We're in the exception case!
-    // Make up a fake value to replace the "no" we stripped out
-    key->assign(flag_name+2);   // the name without the "no"
-    *v = "0";
-  }
+        // If we can't find the flag-name, then we should return an error.
+        // The one exception is if 1) the flag-name is 'nox', 2) there
+        // exists a flag named 'x', and 3) 'x' is a boolean flag.
+        // In that case, we want to return flag 'x'.
+        if (!(flag_name[0] == 'n' && flag_name[1] == 'o')) {
+            // flag-name is not 'nox', so we're not in the exception case.
+            *error_message = StringPrintf("%sunknown command line flag '%s'\n",
+                                          kError, key->c_str());
+            return NULL;
+        }
 
-  // Assign a value if this is a boolean flag
-  if (*v == NULL && strcmp(flag->type_name(), "bool") == 0) {
-    *v = "1";    // the --nox case was already handled, so this is the --x case
-  }
+        flag = FindFlagLocked(flag_name+2);
 
-  return flag;
+        if (flag == NULL) {
+            // No flag named 'x' exists, so we're not in the exception case.
+            *error_message = StringPrintf("%sunknown command line flag '%s'\n",
+                                          kError, key->c_str());
+            return NULL;
+        }
+
+        if (strcmp(flag->type_name(), "bool") != 0) {
+            // 'x' exists but is not boolean, so we're not in the exception case.
+            *error_message = StringPrintf(
+                                 "%sboolean value (%s) specified for %s command line flag\n",
+                                 kError, key->c_str(), flag->type_name());
+            return NULL;
+        }
+
+        // We're in the exception case!
+        // Make up a fake value to replace the "no" we stripped out
+        key->assign(flag_name+2);   // the name without the "no"
+        *v = "0";
+    }
+
+    // Assign a value if this is a boolean flag
+    if (*v == NULL && strcmp(flag->type_name(), "bool") == 0) {
+        *v = "1";    // the --nox case was already handled, so this is the --x case
+    }
+
+    return flag;
 }
 
 bool TryParseLocked(const CommandLineFlag* flag, FlagValue* flag_value,
                     const char* value, string* msg) {
-  // Use tenative_value, not flag_value, until we know value is valid.
-  FlagValue* tentative_value = flag_value->New();
-  if (!tentative_value->ParseFrom(value)) {
-    if (msg) {
-      StringAppendF(msg,
-                    "%sillegal value '%s' specified for %s flag '%s'\n",
-                    kError, value,
-                    flag->type_name(), flag->name());
+    // Use tenative_value, not flag_value, until we know value is valid.
+    FlagValue* tentative_value = flag_value->New();
+
+    if (!tentative_value->ParseFrom(value)) {
+        if (msg) {
+            StringAppendF(msg,
+                          "%sillegal value '%s' specified for %s flag '%s'\n",
+                          kError, value,
+                          flag->type_name(), flag->name());
+        }
+
+        delete tentative_value;
+        return false;
     }
-    delete tentative_value;
-    return false;
-  } else if (!flag->Validate(*tentative_value)) {
-    if (msg) {
-      StringAppendF(msg,
-          "%sfailed validation of new value '%s' for flag '%s'\n",
-          kError, tentative_value->ToString().c_str(),
-          flag->name());
+    else if (!flag->Validate(*tentative_value)) {
+        if (msg) {
+            StringAppendF(msg,
+                          "%sfailed validation of new value '%s' for flag '%s'\n",
+                          kError, tentative_value->ToString().c_str(),
+                          flag->name());
+        }
+
+        delete tentative_value;
+        return false;
     }
-    delete tentative_value;
-    return false;
-  } else {
-    flag_value->CopyFrom(*tentative_value);
-    if (msg) {
-      StringAppendF(msg, "%s set to %s\n",
-                    flag->name(), flag_value->ToString().c_str());
+    else {
+        flag_value->CopyFrom(*tentative_value);
+
+        if (msg) {
+            StringAppendF(msg, "%s set to %s\n",
+                          flag->name(), flag_value->ToString().c_str());
+        }
+
+        delete tentative_value;
+        return true;
     }
-    delete tentative_value;
-    return true;
-  }
 }
 
 bool FlagRegistry::SetFlagLocked(CommandLineFlag* flag,
                                  const char* value,
                                  FlagSettingMode set_mode,
                                  string* msg) {
-  flag->UpdateModifiedBit();
-  switch (set_mode) {
-    case SET_FLAGS_VALUE: {
-      // set or modify the flag's value
-      if (!TryParseLocked(flag, flag->current_, value, msg))
-        return false;
-      flag->modified_ = true;
-      break;
-    }
-    case SET_FLAG_IF_DEFAULT: {
-      // set the flag's value, but only if it hasn't been set by someone else
-      if (!flag->modified_) {
-        if (!TryParseLocked(flag, flag->current_, value, msg))
-          return false;
-        flag->modified_ = true;
-      } else {
-        *msg = StringPrintf("%s set to %s",
-                            flag->name(), flag->current_value().c_str());
-      }
-      break;
-    }
-    case SET_FLAGS_DEFAULT: {
-      // modify the flag's default-value
-      if (!TryParseLocked(flag, flag->defvalue_, value, msg))
-        return false;
-      if (!flag->modified_) {
-        // Need to set both defvalue *and* current, in this case
-        TryParseLocked(flag, flag->current_, value, NULL);
-      }
-      break;
-    }
-    default: {
-      // unknown set_mode
-      assert(false);
-      return false;
-    }
-  }
+    flag->UpdateModifiedBit();
 
-  return true;
+    switch (set_mode) {
+    case SET_FLAGS_VALUE: {
+        // set or modify the flag's value
+        if (!TryParseLocked(flag, flag->current_, value, msg)) {
+            return false;
+        }
+
+        flag->modified_ = true;
+        break;
+    }
+
+    case SET_FLAG_IF_DEFAULT: {
+        // set the flag's value, but only if it hasn't been set by someone else
+        if (!flag->modified_) {
+            if (!TryParseLocked(flag, flag->current_, value, msg)) {
+                return false;
+            }
+
+            flag->modified_ = true;
+        }
+        else {
+            *msg = StringPrintf("%s set to %s",
+                                flag->name(), flag->current_value().c_str());
+        }
+
+        break;
+    }
+
+    case SET_FLAGS_DEFAULT: {
+        // modify the flag's default-value
+        if (!TryParseLocked(flag, flag->defvalue_, value, msg)) {
+            return false;
+        }
+
+        if (!flag->modified_) {
+            // Need to set both defvalue *and* current, in this case
+            TryParseLocked(flag, flag->current_, value, NULL);
+        }
+
+        break;
+    }
+
+    default: {
+        // unknown set_mode
+        assert(false);
+        return false;
+    }
+    }
+
+    return true;
 }
 
 // Get the singleton FlagRegistry object
@@ -889,11 +1095,13 @@ FlagRegistry* FlagRegistry::global_registry_ = NULL;
 Mutex FlagRegistry::global_registry_lock_(Mutex::LINKER_INITIALIZED);
 
 FlagRegistry* FlagRegistry::GlobalRegistry() {
-  MutexLock acquire_lock(&global_registry_lock_);
-  if (!global_registry_) {
-    global_registry_ = new FlagRegistry;
-  }
-  return global_registry_;
+    MutexLock acquire_lock(&global_registry_lock_);
+
+    if (!global_registry_) {
+        global_registry_ = new FlagRegistry;
+    }
+
+    return global_registry_;
 }
 
 // --------------------------------------------------------------------
@@ -912,85 +1120,90 @@ FlagRegistry* FlagRegistry::GlobalRegistry() {
 // --------------------------------------------------------------------
 
 class CommandLineFlagParser {
- public:
-  // The argument is the flag-registry to register the parsed flags in
-  explicit CommandLineFlagParser(FlagRegistry* reg) : registry_(reg) {}
-  ~CommandLineFlagParser() {}
+  public:
+    // The argument is the flag-registry to register the parsed flags in
+    explicit CommandLineFlagParser(FlagRegistry* reg) : registry_(reg) {}
+    ~CommandLineFlagParser() {}
 
-  // Stage 1: Every time this is called, it reads all flags in argv.
-  // However, it ignores all flags that have been successfully set
-  // before.  Typically this is only called once, so this 'reparsing'
-  // behavior isn't important.  It can be useful when trying to
-  // reparse after loading a dll, though.
-  uint32 ParseNewCommandLineFlags(int* argc, char*** argv, bool remove_flags);
+    // Stage 1: Every time this is called, it reads all flags in argv.
+    // However, it ignores all flags that have been successfully set
+    // before.  Typically this is only called once, so this 'reparsing'
+    // behavior isn't important.  It can be useful when trying to
+    // reparse after loading a dll, though.
+    uint32 ParseNewCommandLineFlags(int* argc, char*** argv, bool remove_flags);
 
-  // Stage 2: print reporting info and exit, if requested.
-  // In gflags_reporting.cc:HandleCommandLineHelpFlags().
+    // Stage 2: print reporting info and exit, if requested.
+    // In gflags_reporting.cc:HandleCommandLineHelpFlags().
 
-  // Stage 3: validate all the commandline flags that have validators
-  // registered.
-  void ValidateAllFlags();
+    // Stage 3: validate all the commandline flags that have validators
+    // registered.
+    void ValidateAllFlags();
 
-  // Stage 4: report any errors and return true if any were found.
-  bool ReportErrors();
+    // Stage 4: report any errors and return true if any were found.
+    bool ReportErrors();
 
-  // Set a particular command line option.  "newval" is a string
-  // describing the new value that the option has been set to.  If
-  // option_name does not specify a valid option name, or value is not
-  // a valid value for option_name, newval is empty.  Does recursive
-  // processing for --flagfile and --fromenv.  Returns the new value
-  // if everything went ok, or empty-string if not.  (Actually, the
-  // return-string could hold many flag/value pairs due to --flagfile.)
-  // NB: Must have called registry_->Lock() before calling this function.
-  string ProcessSingleOptionLocked(CommandLineFlag* flag,
-                                   const char* value,
-                                   FlagSettingMode set_mode);
+    // Set a particular command line option.  "newval" is a string
+    // describing the new value that the option has been set to.  If
+    // option_name does not specify a valid option name, or value is not
+    // a valid value for option_name, newval is empty.  Does recursive
+    // processing for --flagfile and --fromenv.  Returns the new value
+    // if everything went ok, or empty-string if not.  (Actually, the
+    // return-string could hold many flag/value pairs due to --flagfile.)
+    // NB: Must have called registry_->Lock() before calling this function.
+    string ProcessSingleOptionLocked(CommandLineFlag* flag,
+                                     const char* value,
+                                     FlagSettingMode set_mode);
 
-  // Set a whole batch of command line options as specified by contentdata,
-  // which is in flagfile format (and probably has been read from a flagfile).
-  // Returns the new value if everything went ok, or empty-string if
-  // not.  (Actually, the return-string could hold many flag/value
-  // pairs due to --flagfile.)
-  // NB: Must have called registry_->Lock() before calling this function.
-  string ProcessOptionsFromStringLocked(const string& contentdata,
-                                        FlagSettingMode set_mode);
+    // Set a whole batch of command line options as specified by contentdata,
+    // which is in flagfile format (and probably has been read from a flagfile).
+    // Returns the new value if everything went ok, or empty-string if
+    // not.  (Actually, the return-string could hold many flag/value
+    // pairs due to --flagfile.)
+    // NB: Must have called registry_->Lock() before calling this function.
+    string ProcessOptionsFromStringLocked(const string& contentdata,
+                                          FlagSettingMode set_mode);
 
-  // These are the 'recursive' flags, defined at the top of this file.
-  // Whenever we see these flags on the commandline, we must take action.
-  // These are called by ProcessSingleOptionLocked and, similarly, return
-  // new values if everything went ok, or the empty-string if not.
-  string ProcessFlagfileLocked(const string& flagval, FlagSettingMode set_mode);
-  // diff fromenv/tryfromenv
-  string ProcessFromenvLocked(const string& flagval, FlagSettingMode set_mode,
-                              bool errors_are_fatal);
+    // These are the 'recursive' flags, defined at the top of this file.
+    // Whenever we see these flags on the commandline, we must take action.
+    // These are called by ProcessSingleOptionLocked and, similarly, return
+    // new values if everything went ok, or the empty-string if not.
+    string ProcessFlagfileLocked(const string& flagval, FlagSettingMode set_mode);
+    // diff fromenv/tryfromenv
+    string ProcessFromenvLocked(const string& flagval, FlagSettingMode set_mode,
+                                bool errors_are_fatal);
 
- private:
-  FlagRegistry* const registry_;
-  map<string, string> error_flags_;      // map from name to error message
-  // This could be a set<string>, but we reuse the map to minimize the .o size
-  map<string, string> undefined_names_;  // --[flag] name was not registered
+  private:
+    FlagRegistry* const registry_;
+    map<string, string> error_flags_;      // map from name to error message
+    // This could be a set<string>, but we reuse the map to minimize the .o size
+    map<string, string> undefined_names_;  // --[flag] name was not registered
 };
 
 
 // Parse a list of (comma-separated) flags.
 static void ParseFlagList(const char* value, vector<string>* flags) {
-  for (const char *p = value; p && *p; value = p) {
-    p = strchr(value, ',');
-    size_t len;
-    if (p) {
-      len = p - value;
-      p++;
-    } else {
-      len = strlen(value);
+    for (const char* p = value; p && *p; value = p) {
+        p = strchr(value, ',');
+        size_t len;
+
+        if (p) {
+            len = p - value;
+            p++;
+        }
+        else {
+            len = strlen(value);
+        }
+
+        if (len == 0) {
+            ReportError(DIE, "ERROR: empty flaglist entry\n");
+        }
+
+        if (value[0] == '-') {
+            ReportError(DIE, "ERROR: flag \"%*s\" begins with '-'\n", len, value);
+        }
+
+        flags->push_back(string(value, len));
     }
-
-    if (len == 0)
-      ReportError(DIE, "ERROR: empty flaglist entry\n");
-    if (value[0] == '-')
-      ReportError(DIE, "ERROR: flag \"%*s\" begins with '-'\n", len, value);
-
-    flags->push_back(string(value, len));
-  }
 }
 
 // Snarf an entire file into a C++ string.  This is just so that we
@@ -1000,339 +1213,402 @@ static void ParseFlagList(const char* value, vector<string>* flags) {
 #define PFATAL(s)  do { perror(s); gflags_exitfunc(1); } while (0)
 
 static string ReadFileIntoString(const char* filename) {
-  const int kBufSize = 8092;
-  char buffer[kBufSize];
-  string s;
-  FILE* fp = fopen(filename, "r");
-  if (!fp)  PFATAL(filename);
-  size_t n;
-  while ( (n=fread(buffer, 1, kBufSize, fp)) > 0 ) {
-    if (ferror(fp))  PFATAL(filename);
-    s.append(buffer, n);
-  }
-  fclose(fp);
-  return s;
+    const int kBufSize = 8092;
+    char buffer[kBufSize];
+    string s;
+    FILE* fp = fopen(filename, "r");
+
+    if (!fp) {
+        PFATAL(filename);
+    }
+
+    size_t n;
+
+    while ( (n=fread(buffer, 1, kBufSize, fp)) > 0 ) {
+        if (ferror(fp)) {
+            PFATAL(filename);
+        }
+
+        s.append(buffer, n);
+    }
+
+    fclose(fp);
+    return s;
 }
 
 uint32 CommandLineFlagParser::ParseNewCommandLineFlags(int* argc, char*** argv,
-                                                       bool remove_flags) {
-  const char *program_name = strrchr((*argv)[0], PATH_SEPARATOR);   // nix path
-  program_name = (program_name == NULL ? (*argv)[0] : program_name+1);
+        bool remove_flags) {
+    const char* program_name = strrchr((*argv)[0], PATH_SEPARATOR);   // nix path
+    program_name = (program_name == NULL ? (*argv)[0] : program_name+1);
 
-  int first_nonopt = *argc;        // for non-options moved to the end
+    int first_nonopt = *argc;        // for non-options moved to the end
 
-  registry_->Lock();
-  for (int i = 1; i < first_nonopt; i++) {
-    char* arg = (*argv)[i];
+    registry_->Lock();
 
-    // Like getopt(), we permute non-option flags to be at the end.
-    if (arg[0] != '-' ||           // must be a program argument
-        (arg[0] == '-' && arg[1] == '\0')) {  // "-" is an argument, not a flag
-      memmove((*argv) + i, (*argv) + i+1, (*argc - (i+1)) * sizeof((*argv)[i]));
-      (*argv)[*argc-1] = arg;      // we go last
-      first_nonopt--;              // we've been pushed onto the stack
-      i--;                         // to undo the i++ in the loop
-      continue;
-    }
+    for (int i = 1; i < first_nonopt; i++) {
+        char* arg = (*argv)[i];
 
-    if (arg[0] == '-') arg++;      // allow leading '-'
-    if (arg[0] == '-') arg++;      // or leading '--'
-
-    // -- alone means what it does for GNU: stop options parsing
-    if (*arg == '\0') {
-      first_nonopt = i+1;
-      break;
-    }
-
-    // Find the flag object for this option
-    string key;
-    const char* value;
-    string error_message;
-    CommandLineFlag* flag = registry_->SplitArgumentLocked(arg, &key, &value,
-                                                           &error_message);
-    if (flag == NULL) {
-      undefined_names_[key] = "";    // value isn't actually used
-      error_flags_[key] = error_message;
-      continue;
-    }
-
-    if (value == NULL) {
-      // Boolean options are always assigned a value by SplitArgumentLocked()
-      assert(strcmp(flag->type_name(), "bool") != 0);
-      if (i+1 >= first_nonopt) {
-        // This flag needs a value, but there is nothing available
-        error_flags_[key] = (string(kError) + "flag '" + (*argv)[i] + "'"
-                             + " is missing its argument");
-        if (flag->help() && flag->help()[0] > '\001') {
-          // Be useful in case we have a non-stripped description.
-          error_flags_[key] += string("; flag description: ") + flag->help();
+        // Like getopt(), we permute non-option flags to be at the end.
+        if (arg[0] != '-' ||           // must be a program argument
+                (arg[0] == '-' && arg[1] == '\0')) {  // "-" is an argument, not a flag
+            memmove((*argv) + i, (*argv) + i+1, (*argc - (i+1)) * sizeof((*argv)[i]));
+            (*argv)[*argc-1] = arg;      // we go last
+            first_nonopt--;              // we've been pushed onto the stack
+            i--;                         // to undo the i++ in the loop
+            continue;
         }
-        error_flags_[key] += "\n";
-        break;    // we treat this as an unrecoverable error
-      } else {
-        value = (*argv)[++i];                   // read next arg for value
 
-        // Heuristic to detect the case where someone treats a string arg
-        // like a bool:
-        // --my_string_var --foo=bar
-        // We look for a flag of string type, whose value begins with a
-        // dash, and where the flag-name and value are separated by a
-        // space rather than an '='.
-        // To avoid false positives, we also require the word "true"
-        // or "false" in the help string.  Without this, a valid usage
-        // "-lat -30.5" would trigger the warning.  The common cases we
-        // want to solve talk about true and false as values.
-        if (value[0] == '-'
-            && strcmp(flag->type_name(), "string") == 0
-            && (strstr(flag->help(), "true")
-                || strstr(flag->help(), "false"))) {
-          LOG(WARNING) << "Did you really mean to set flag '"
-                       << flag->name() << "' to the value '"
-                       << value << "'?";
+        if (arg[0] == '-') {
+            arg++;    // allow leading '-'
         }
-      }
+
+        if (arg[0] == '-') {
+            arg++;    // or leading '--'
+        }
+
+        // -- alone means what it does for GNU: stop options parsing
+        if (*arg == '\0') {
+            first_nonopt = i+1;
+            break;
+        }
+
+        // Find the flag object for this option
+        string key;
+        const char* value;
+        string error_message;
+        CommandLineFlag* flag = registry_->SplitArgumentLocked(arg, &key, &value,
+                                &error_message);
+
+        if (flag == NULL) {
+            undefined_names_[key] = "";    // value isn't actually used
+            error_flags_[key] = error_message;
+            continue;
+        }
+
+        if (value == NULL) {
+            // Boolean options are always assigned a value by SplitArgumentLocked()
+            assert(strcmp(flag->type_name(), "bool") != 0);
+
+            if (i+1 >= first_nonopt) {
+                // This flag needs a value, but there is nothing available
+                error_flags_[key] = (string(kError) + "flag '" + (*argv)[i] + "'"
+                                     + " is missing its argument");
+
+                if (flag->help() && flag->help()[0] > '\001') {
+                    // Be useful in case we have a non-stripped description.
+                    error_flags_[key] += string("; flag description: ") + flag->help();
+                }
+
+                error_flags_[key] += "\n";
+                break;    // we treat this as an unrecoverable error
+            }
+            else {
+                value = (*argv)[++i];                   // read next arg for value
+
+                // Heuristic to detect the case where someone treats a string arg
+                // like a bool:
+                // --my_string_var --foo=bar
+                // We look for a flag of string type, whose value begins with a
+                // dash, and where the flag-name and value are separated by a
+                // space rather than an '='.
+                // To avoid false positives, we also require the word "true"
+                // or "false" in the help string.  Without this, a valid usage
+                // "-lat -30.5" would trigger the warning.  The common cases we
+                // want to solve talk about true and false as values.
+                if (value[0] == '-'
+                        && strcmp(flag->type_name(), "string") == 0
+                        && (strstr(flag->help(), "true")
+                            || strstr(flag->help(), "false"))) {
+                    LOG(WARNING) << "Did you really mean to set flag '"
+                                 << flag->name() << "' to the value '"
+                                 << value << "'?";
+                }
+            }
+        }
+
+        // TODO(csilvers): only set a flag if we hadn't set it before here
+        ProcessSingleOptionLocked(flag, value, SET_FLAGS_VALUE);
     }
 
-    // TODO(csilvers): only set a flag if we hadn't set it before here
-    ProcessSingleOptionLocked(flag, value, SET_FLAGS_VALUE);
-  }
-  registry_->Unlock();
+    registry_->Unlock();
 
-  if (remove_flags) {   // Fix up argc and argv by removing command line flags
-    (*argv)[first_nonopt-1] = (*argv)[0];
-    (*argv) += (first_nonopt-1);
-    (*argc) -= (first_nonopt-1);
-    first_nonopt = 1;   // because we still don't count argv[0]
-  }
+    if (remove_flags) {   // Fix up argc and argv by removing command line flags
+        (*argv)[first_nonopt-1] = (*argv)[0];
+        (*argv) += (first_nonopt-1);
+        (*argc) -= (first_nonopt-1);
+        first_nonopt = 1;   // because we still don't count argv[0]
+    }
 
-  logging_is_probably_set_up = true;   // because we've parsed --logdir, etc.
+    logging_is_probably_set_up = true;   // because we've parsed --logdir, etc.
 
-  return first_nonopt;
+    return first_nonopt;
 }
 
 string CommandLineFlagParser::ProcessFlagfileLocked(const string& flagval,
-                                                    FlagSettingMode set_mode) {
-  if (flagval.empty())
-    return "";
+        FlagSettingMode set_mode) {
+    if (flagval.empty()) {
+        return "";
+    }
 
-  string msg;
-  vector<string> filename_list;
-  ParseFlagList(flagval.c_str(), &filename_list);  // take a list of filenames
-  for (size_t i = 0; i < filename_list.size(); ++i) {
-    const char* file = filename_list[i].c_str();
-    msg += ProcessOptionsFromStringLocked(ReadFileIntoString(file), set_mode);
-  }
-  return msg;
+    string msg;
+    vector<string> filename_list;
+    ParseFlagList(flagval.c_str(), &filename_list);  // take a list of filenames
+
+    for (size_t i = 0; i < filename_list.size(); ++i) {
+        const char* file = filename_list[i].c_str();
+        msg += ProcessOptionsFromStringLocked(ReadFileIntoString(file), set_mode);
+    }
+
+    return msg;
 }
 
 string CommandLineFlagParser::ProcessFromenvLocked(const string& flagval,
-                                                   FlagSettingMode set_mode,
-                                                   bool errors_are_fatal) {
-  if (flagval.empty())
-    return "";
-
-  string msg;
-  vector<string> flaglist;
-  ParseFlagList(flagval.c_str(), &flaglist);
-
-  for (size_t i = 0; i < flaglist.size(); ++i) {
-    const char* flagname = flaglist[i].c_str();
-    CommandLineFlag* flag = registry_->FindFlagLocked(flagname);
-    if (flag == NULL) {
-      error_flags_[flagname] =
-          StringPrintf("%sunknown command line flag '%s' "
-                       "(via --fromenv or --tryfromenv)\n",
-                       kError, flagname);
-      undefined_names_[flagname] = "";
-      continue;
+        FlagSettingMode set_mode,
+        bool errors_are_fatal) {
+    if (flagval.empty()) {
+        return "";
     }
 
-    const string envname = string("FLAGS_") + string(flagname);
-    const char* envval = getenv(envname.c_str());
-    if (!envval) {
-      if (errors_are_fatal) {
-        error_flags_[flagname] = (string(kError) + envname +
-                                  " not found in environment\n");
-      }
-      continue;
+    string msg;
+    vector<string> flaglist;
+    ParseFlagList(flagval.c_str(), &flaglist);
+
+    for (size_t i = 0; i < flaglist.size(); ++i) {
+        const char* flagname = flaglist[i].c_str();
+        CommandLineFlag* flag = registry_->FindFlagLocked(flagname);
+
+        if (flag == NULL) {
+            error_flags_[flagname] =
+                StringPrintf("%sunknown command line flag '%s' "
+                             "(via --fromenv or --tryfromenv)\n",
+                             kError, flagname);
+            undefined_names_[flagname] = "";
+            continue;
+        }
+
+        const string envname = string("FLAGS_") + string(flagname);
+        const char* envval = getenv(envname.c_str());
+
+        if (!envval) {
+            if (errors_are_fatal) {
+                error_flags_[flagname] = (string(kError) + envname +
+                                          " not found in environment\n");
+            }
+
+            continue;
+        }
+
+        // Avoid infinite recursion.
+        if ((strcmp(envval, "fromenv") == 0) ||
+                (strcmp(envval, "tryfromenv") == 0)) {
+            error_flags_[flagname] =
+                StringPrintf("%sinfinite recursion on environment flag '%s'\n",
+                             kError, envval);
+            continue;
+        }
+
+        msg += ProcessSingleOptionLocked(flag, envval, set_mode);
     }
 
-    // Avoid infinite recursion.
-    if ((strcmp(envval, "fromenv") == 0) ||
-        (strcmp(envval, "tryfromenv") == 0)) {
-      error_flags_[flagname] =
-          StringPrintf("%sinfinite recursion on environment flag '%s'\n",
-                       kError, envval);
-      continue;
-    }
-
-    msg += ProcessSingleOptionLocked(flag, envval, set_mode);
-  }
-  return msg;
+    return msg;
 }
 
 string CommandLineFlagParser::ProcessSingleOptionLocked(
     CommandLineFlag* flag, const char* value, FlagSettingMode set_mode) {
-  string msg;
-  if (value && !registry_->SetFlagLocked(flag, value, set_mode, &msg)) {
-    error_flags_[flag->name()] = msg;
-    return "";
-  }
+    string msg;
 
-  // The recursive flags, --flagfile and --fromenv and --tryfromenv,
-  // must be dealt with as soon as they're seen.  They will emit
-  // messages of their own.
-  if (strcmp(flag->name(), "flagfile") == 0) {
-    msg += ProcessFlagfileLocked(FLAGS_flagfile, set_mode);
+    if (value && !registry_->SetFlagLocked(flag, value, set_mode, &msg)) {
+        error_flags_[flag->name()] = msg;
+        return "";
+    }
 
-  } else if (strcmp(flag->name(), "fromenv") == 0) {
-    // last arg indicates envval-not-found is fatal (unlike in --tryfromenv)
-    msg += ProcessFromenvLocked(FLAGS_fromenv, set_mode, true);
+    // The recursive flags, --flagfile and --fromenv and --tryfromenv,
+    // must be dealt with as soon as they're seen.  They will emit
+    // messages of their own.
+    if (strcmp(flag->name(), "flagfile") == 0) {
+        msg += ProcessFlagfileLocked(FLAGS_flagfile, set_mode);
 
-  } else if (strcmp(flag->name(), "tryfromenv") == 0) {
-    msg += ProcessFromenvLocked(FLAGS_tryfromenv, set_mode, false);
-  }
+    }
+    else if (strcmp(flag->name(), "fromenv") == 0) {
+        // last arg indicates envval-not-found is fatal (unlike in --tryfromenv)
+        msg += ProcessFromenvLocked(FLAGS_fromenv, set_mode, true);
 
-  return msg;
+    }
+    else if (strcmp(flag->name(), "tryfromenv") == 0) {
+        msg += ProcessFromenvLocked(FLAGS_tryfromenv, set_mode, false);
+    }
+
+    return msg;
 }
 
 void CommandLineFlagParser::ValidateAllFlags() {
-  FlagRegistryLock frl(registry_);
-  for (FlagRegistry::FlagConstIterator i = registry_->flags_.begin();
-       i != registry_->flags_.end(); ++i) {
-    if (!i->second->ValidateCurrent()) {
-      // only set a message if one isn't already there.  (If there's
-      // an error message, our job is done, even if it's not exactly
-      // the same error.)
-      if (error_flags_[i->second->name()].empty())
-        error_flags_[i->second->name()] =
-            string(kError) + "--" + i->second->name() +
-            " must be set on the commandline"
-            " (default value fails validation)\n";
+    FlagRegistryLock frl(registry_);
+
+    for (FlagRegistry::FlagConstIterator i = registry_->flags_.begin();
+            i != registry_->flags_.end(); ++i) {
+        if (!i->second->ValidateCurrent()) {
+            // only set a message if one isn't already there.  (If there's
+            // an error message, our job is done, even if it's not exactly
+            // the same error.)
+            if (error_flags_[i->second->name()].empty())
+                error_flags_[i->second->name()] =
+                    string(kError) + "--" + i->second->name() +
+                    " must be set on the commandline"
+                    " (default value fails validation)\n";
+        }
     }
-  }
 }
 
 bool CommandLineFlagParser::ReportErrors() {
-  // error_flags_ indicates errors we saw while parsing.
-  // But we ignore undefined-names if ok'ed by --undef_ok
-  if (!FLAGS_undefok.empty()) {
-    vector<string> flaglist;
-    ParseFlagList(FLAGS_undefok.c_str(), &flaglist);
-    for (size_t i = 0; i < flaglist.size(); ++i) {
-      // We also deal with --no<flag>, in case the flagname was boolean
-      const string no_version = string("no") + flaglist[i];
-      if (undefined_names_.find(flaglist[i]) != undefined_names_.end()) {
-        error_flags_[flaglist[i]] = "";    // clear the error message
-      } else if (undefined_names_.find(no_version) != undefined_names_.end()) {
-        error_flags_[no_version] = "";
-      }
-    }
-  }
-  // Likewise, if they decided to allow reparsing, all undefined-names
-  // are ok; we just silently ignore them now, and hope that a future
-  // parse will pick them up somehow.
-  if (allow_command_line_reparsing) {
-    for (map<string, string>::const_iterator it = undefined_names_.begin();
-         it != undefined_names_.end();  ++it)
-      error_flags_[it->first] = "";      // clear the error message
-  }
+    // error_flags_ indicates errors we saw while parsing.
+    // But we ignore undefined-names if ok'ed by --undef_ok
+    if (!FLAGS_undefok.empty()) {
+        vector<string> flaglist;
+        ParseFlagList(FLAGS_undefok.c_str(), &flaglist);
 
-  bool found_error = false;
-  string error_message;
-  for (map<string, string>::const_iterator it = error_flags_.begin();
-       it != error_flags_.end(); ++it) {
-    if (!it->second.empty()) {
-      error_message.append(it->second.data(), it->second.size());
-      found_error = true;
+        for (size_t i = 0; i < flaglist.size(); ++i) {
+            // We also deal with --no<flag>, in case the flagname was boolean
+            const string no_version = string("no") + flaglist[i];
+
+            if (undefined_names_.find(flaglist[i]) != undefined_names_.end()) {
+                error_flags_[flaglist[i]] = "";    // clear the error message
+            }
+            else if (undefined_names_.find(no_version) != undefined_names_.end()) {
+                error_flags_[no_version] = "";
+            }
+        }
     }
-  }
-  if (found_error)
-    ReportError(DO_NOT_DIE, "%s", error_message.c_str());
-  return found_error;
+
+    // Likewise, if they decided to allow reparsing, all undefined-names
+    // are ok; we just silently ignore them now, and hope that a future
+    // parse will pick them up somehow.
+    if (allow_command_line_reparsing) {
+        for (map<string, string>::const_iterator it = undefined_names_.begin();
+                it != undefined_names_.end();  ++it) {
+            error_flags_[it->first] = "";    // clear the error message
+        }
+    }
+
+    bool found_error = false;
+    string error_message;
+
+    for (map<string, string>::const_iterator it = error_flags_.begin();
+            it != error_flags_.end(); ++it) {
+        if (!it->second.empty()) {
+            error_message.append(it->second.data(), it->second.size());
+            found_error = true;
+        }
+    }
+
+    if (found_error) {
+        ReportError(DO_NOT_DIE, "%s", error_message.c_str());
+    }
+
+    return found_error;
 }
 
 string CommandLineFlagParser::ProcessOptionsFromStringLocked(
     const string& contentdata, FlagSettingMode set_mode) {
-  string retval;
-  const char* flagfile_contents = contentdata.c_str();
-  bool flags_are_relevant = true;   // set to false when filenames don't match
-  bool in_filename_section = false;
+    string retval;
+    const char* flagfile_contents = contentdata.c_str();
+    bool flags_are_relevant = true;   // set to false when filenames don't match
+    bool in_filename_section = false;
 
-  const char* line_end = flagfile_contents;
-  // We read this file a line at a time.
-  for (; line_end; flagfile_contents = line_end + 1) {
-    while (*flagfile_contents && isspace(*flagfile_contents))
-      ++flagfile_contents;
-    line_end = strchr(flagfile_contents, '\n');
-    size_t len = line_end ? line_end - flagfile_contents
-                          : strlen(flagfile_contents);
-    string line(flagfile_contents, len);
+    const char* line_end = flagfile_contents;
 
-    // Each line can be one of four things:
-    // 1) A comment line -- we skip it
-    // 2) An empty line -- we skip it
-    // 3) A list of filenames -- starts a new filenames+flags section
-    // 4) A --flag=value line -- apply if previous filenames match
-    if (line.empty() || line[0] == '#') {
-      // comment or empty line; just ignore
-
-    } else if (line[0] == '-') {    // flag
-      in_filename_section = false;  // instead, it was a flag-line
-      if (!flags_are_relevant)      // skip this flag; applies to someone else
-        continue;
-
-      const char* name_and_val = line.c_str() + 1;    // skip the leading -
-      if (*name_and_val == '-')
-        name_and_val++;                               // skip second - too
-      string key;
-      const char* value;
-      string error_message;
-      CommandLineFlag* flag = registry_->SplitArgumentLocked(name_and_val,
-                                                             &key, &value,
-                                                             &error_message);
-      // By API, errors parsing flagfile lines are silently ignored.
-      if (flag == NULL) {
-        // "WARNING: flagname '" + key + "' not found\n"
-      } else if (value == NULL) {
-        // "WARNING: flagname '" + key + "' missing a value\n"
-      } else {
-        retval += ProcessSingleOptionLocked(flag, value, set_mode);
-      }
-
-    } else {                        // a filename!
-      if (!in_filename_section) {   // start over: assume filenames don't match
-        in_filename_section = true;
-        flags_are_relevant = false;
-      }
-
-      // Split the line up at spaces into glob-patterns
-      const char* space = line.c_str();   // just has to be non-NULL
-      for (const char* word = line.c_str(); *space; word = space+1) {
-        if (flags_are_relevant)     // we can stop as soon as we match
-          break;
-        space = strchr(word, ' ');
-        if (space == NULL)
-          space = word + strlen(word);
-        const string glob(word, space - word);
-        // We try matching both against the full argv0 and basename(argv0)
-        if (glob == ProgramInvocationName()       // small optimization
-            || glob == ProgramInvocationShortName()
-#ifdef HAVE_FNMATCH_H
-            || fnmatch(glob.c_str(),
-                       ProgramInvocationName(),
-                       FNM_PATHNAME) == 0
-            || fnmatch(glob.c_str(),
-                       ProgramInvocationShortName(),
-                       FNM_PATHNAME) == 0
-#endif
-            ) {
-          flags_are_relevant = true;
+    // We read this file a line at a time.
+    for (; line_end; flagfile_contents = line_end + 1) {
+        while (*flagfile_contents && isspace(*flagfile_contents)) {
+            ++flagfile_contents;
         }
-      }
+
+        line_end = strchr(flagfile_contents, '\n');
+        size_t len = line_end ? line_end - flagfile_contents
+                     : strlen(flagfile_contents);
+        string line(flagfile_contents, len);
+
+        // Each line can be one of four things:
+        // 1) A comment line -- we skip it
+        // 2) An empty line -- we skip it
+        // 3) A list of filenames -- starts a new filenames+flags section
+        // 4) A --flag=value line -- apply if previous filenames match
+        if (line.empty() || line[0] == '#') {
+            // comment or empty line; just ignore
+
+        }
+        else if (line[0] == '-') {      // flag
+            in_filename_section = false;  // instead, it was a flag-line
+
+            if (!flags_are_relevant) {    // skip this flag; applies to someone else
+                continue;
+            }
+
+            const char* name_and_val = line.c_str() + 1;    // skip the leading -
+
+            if (*name_and_val == '-') {
+                name_and_val++;    // skip second - too
+            }
+
+            string key;
+            const char* value;
+            string error_message;
+            CommandLineFlag* flag = registry_->SplitArgumentLocked(name_and_val,
+                                    &key, &value,
+                                    &error_message);
+
+            // By API, errors parsing flagfile lines are silently ignored.
+            if (flag == NULL) {
+                // "WARNING: flagname '" + key + "' not found\n"
+            }
+            else if (value == NULL) {
+                // "WARNING: flagname '" + key + "' missing a value\n"
+            }
+            else {
+                retval += ProcessSingleOptionLocked(flag, value, set_mode);
+            }
+
+        }
+        else {                          // a filename!
+            if (!in_filename_section) {   // start over: assume filenames don't match
+                in_filename_section = true;
+                flags_are_relevant = false;
+            }
+
+            // Split the line up at spaces into glob-patterns
+            const char* space = line.c_str();   // just has to be non-NULL
+
+            for (const char* word = line.c_str(); *space; word = space+1) {
+                if (flags_are_relevant) {   // we can stop as soon as we match
+                    break;
+                }
+
+                space = strchr(word, ' ');
+
+                if (space == NULL) {
+                    space = word + strlen(word);
+                }
+
+                const string glob(word, space - word);
+
+                // We try matching both against the full argv0 and basename(argv0)
+                if (glob == ProgramInvocationName()       // small optimization
+                        || glob == ProgramInvocationShortName()
+#ifdef HAVE_FNMATCH_H
+                        || fnmatch(glob.c_str(),
+                                   ProgramInvocationName(),
+                                   FNM_PATHNAME) == 0
+                        || fnmatch(glob.c_str(),
+                                   ProgramInvocationShortName(),
+                                   FNM_PATHNAME) == 0
+#endif
+                   ) {
+                    flags_are_relevant = true;
+                }
+            }
+        }
     }
-  }
-  return retval;
+
+    return retval;
 }
 
 // --------------------------------------------------------------------
@@ -1345,41 +1621,50 @@ string CommandLineFlagParser::ProcessOptionsFromStringLocked(
 // --------------------------------------------------------------------
 
 template<typename T>
-T GetFromEnv(const char *varname, const char* type, T dflt) {
-  const char* const valstr = getenv(varname);
-  if (!valstr)
-    return dflt;
-  FlagValue ifv(new T, type, true);
-  if (!ifv.ParseFrom(valstr))
-    ReportError(DIE, "ERROR: error parsing env variable '%s' with value '%s'\n",
-                varname, valstr);
-  return OTHER_VALUE_AS(ifv, T);
+T GetFromEnv(const char* varname, const char* type, T dflt) {
+    const char* const valstr = getenv(varname);
+
+    if (!valstr) {
+        return dflt;
+    }
+
+    FlagValue ifv(new T, type, true);
+
+    if (!ifv.ParseFrom(valstr))
+        ReportError(DIE, "ERROR: error parsing env variable '%s' with value '%s'\n",
+                    varname, valstr);
+
+    return OTHER_VALUE_AS(ifv, T);
 }
 
 bool AddFlagValidator(const void* flag_ptr, ValidateFnProto validate_fn_proto) {
-  // We want a lock around this routine, in case two threads try to
-  // add a validator (hopefully the same one!) at once.  We could use
-  // our own thread, but we need to loook at the registry anyway, so
-  // we just steal that one.
-  FlagRegistry* const registry = FlagRegistry::GlobalRegistry();
-  FlagRegistryLock frl(registry);
-  // First, find the flag whose current-flag storage is 'flag'.
-  // This is the CommandLineFlag whose current_->value_buffer_ == flag
-  CommandLineFlag* flag = registry->FindFlagViaPtrLocked(flag_ptr);
-  if (!flag) {
-    LOG(WARNING) << "Ignoring RegisterValidateFunction() for flag pointer "
-                 << flag_ptr << ": no flag found at that address";
-    return false;
-  } else if (validate_fn_proto == flag->validate_function()) {
-    return true;    // ok to register the same function over and over again
-  } else if (validate_fn_proto != NULL && flag->validate_function() != NULL) {
-    LOG(WARNING) << "Ignoring RegisterValidateFunction() for flag '"
-                 << flag->name() << "': validate-fn already registered";
-    return false;
-  } else {
-    flag->validate_fn_proto_ = validate_fn_proto;
-    return true;
-  }
+    // We want a lock around this routine, in case two threads try to
+    // add a validator (hopefully the same one!) at once.  We could use
+    // our own thread, but we need to loook at the registry anyway, so
+    // we just steal that one.
+    FlagRegistry* const registry = FlagRegistry::GlobalRegistry();
+    FlagRegistryLock frl(registry);
+    // First, find the flag whose current-flag storage is 'flag'.
+    // This is the CommandLineFlag whose current_->value_buffer_ == flag
+    CommandLineFlag* flag = registry->FindFlagViaPtrLocked(flag_ptr);
+
+    if (!flag) {
+        LOG(WARNING) << "Ignoring RegisterValidateFunction() for flag pointer "
+                     << flag_ptr << ": no flag found at that address";
+        return false;
+    }
+    else if (validate_fn_proto == flag->validate_function()) {
+        return true;    // ok to register the same function over and over again
+    }
+    else if (validate_fn_proto != NULL && flag->validate_function() != NULL) {
+        LOG(WARNING) << "Ignoring RegisterValidateFunction() for flag '"
+                     << flag->name() << "': validate-fn already registered";
+        return false;
+    }
+    else {
+        flag->validate_fn_proto_ = validate_fn_proto;
+        return true;
+    }
 }
 
 }  // end unnamed namespaces
@@ -1401,18 +1686,22 @@ bool AddFlagValidator(const void* flag_ptr, ValidateFnProto validate_fn_proto) {
 FlagRegisterer::FlagRegisterer(const char* name, const char* type,
                                const char* help, const char* filename,
                                void* current_storage, void* defvalue_storage) {
-  if (help == NULL)
-    help = "";
-  // FlagValue expects the type-name to not include any namespace
-  // components, so we get rid of those, if any.
-  if (strchr(type, ':'))
-    type = strrchr(type, ':') + 1;
-  FlagValue* current = new FlagValue(current_storage, type, false);
-  FlagValue* defvalue = new FlagValue(defvalue_storage, type, false);
-  // Importantly, flag_ will never be deleted, so storage is always good.
-  CommandLineFlag* flag = new CommandLineFlag(name, help, filename,
-                                              current, defvalue);
-  FlagRegistry::GlobalRegistry()->RegisterFlag(flag);   // default registry
+    if (help == NULL) {
+        help = "";
+    }
+
+    // FlagValue expects the type-name to not include any namespace
+    // components, so we get rid of those, if any.
+    if (strchr(type, ':')) {
+        type = strrchr(type, ':') + 1;
+    }
+
+    FlagValue* current = new FlagValue(current_storage, type, false);
+    FlagValue* defvalue = new FlagValue(defvalue_storage, type, false);
+    // Importantly, flag_ will never be deleted, so storage is always good.
+    CommandLineFlag* flag = new CommandLineFlag(name, help, filename,
+            current, defvalue);
+    FlagRegistry::GlobalRegistry()->RegisterFlag(flag);   // default registry
 }
 
 // --------------------------------------------------------------------
@@ -1424,27 +1713,32 @@ FlagRegisterer::FlagRegisterer(const char* name, const char* type,
 // --------------------------------------------------------------------
 
 struct FilenameFlagnameCmp {
-  bool operator()(const CommandLineFlagInfo& a,
-                  const CommandLineFlagInfo& b) const {
-    int cmp = strcmp(a.filename.c_str(), b.filename.c_str());
-    if (cmp == 0)
-      cmp = strcmp(a.name.c_str(), b.name.c_str());  // secondary sort key
-    return cmp < 0;
-  }
+    bool operator()(const CommandLineFlagInfo& a,
+                    const CommandLineFlagInfo& b) const {
+        int cmp = strcmp(a.filename.c_str(), b.filename.c_str());
+
+        if (cmp == 0) {
+            cmp = strcmp(a.name.c_str(), b.name.c_str());    // secondary sort key
+        }
+
+        return cmp < 0;
+    }
 };
 
 void GetAllFlags(vector<CommandLineFlagInfo>* OUTPUT) {
-  FlagRegistry* const registry = FlagRegistry::GlobalRegistry();
-  registry->Lock();
-  for (FlagRegistry::FlagConstIterator i = registry->flags_.begin();
-       i != registry->flags_.end(); ++i) {
-    CommandLineFlagInfo fi;
-    i->second->FillCommandLineFlagInfo(&fi);
-    OUTPUT->push_back(fi);
-  }
-  registry->Unlock();
-  // Now sort the flags, first by filename they occur in, then alphabetically
-  sort(OUTPUT->begin(), OUTPUT->end(), FilenameFlagnameCmp());
+    FlagRegistry* const registry = FlagRegistry::GlobalRegistry();
+    registry->Lock();
+
+    for (FlagRegistry::FlagConstIterator i = registry->flags_.begin();
+            i != registry->flags_.end(); ++i) {
+        CommandLineFlagInfo fi;
+        i->second->FillCommandLineFlagInfo(&fi);
+        OUTPUT->push_back(fi);
+    }
+
+    registry->Unlock();
+    // Now sort the flags, first by filename they occur in, then alphabetically
+    sort(OUTPUT->begin(), OUTPUT->end(), FilenameFlagnameCmp());
 }
 
 // --------------------------------------------------------------------
@@ -1470,58 +1764,79 @@ static uint32 argv_sum = 0;
 static const char* program_usage = NULL;
 
 void SetArgv(int argc, const char** argv) {
-  static bool called_set_argv = false;
-  if (called_set_argv)         // we already have an argv for you
-    return;
+    static bool called_set_argv = false;
 
-  called_set_argv = true;
-
-  assert(argc > 0);            // every program has at least a progname
-  argv0 = strdup(argv[0]);     // small memory leak, but fn only called once
-  assert(argv0);
-
-  string cmdline_string;       // easier than doing strcats
-  for (int i = 0; i < argc; i++) {
-    if (i != 0) {
-      cmdline_string += " ";
+    if (called_set_argv) {       // we already have an argv for you
+        return;
     }
-    cmdline_string += argv[i];
-    argvs.push_back(argv[i]);
-  }
-  cmdline = strdup(cmdline_string.c_str());  // another small memory leak
-  assert(cmdline);
 
-  // Compute a simple sum of all the chars in argv
-  for (const char* c = cmdline; *c; c++)
-    argv_sum += *c;
+    called_set_argv = true;
+
+    assert(argc > 0);            // every program has at least a progname
+    argv0 = strdup(argv[0]);     // small memory leak, but fn only called once
+    assert(argv0);
+
+    string cmdline_string;       // easier than doing strcats
+
+    for (int i = 0; i < argc; i++) {
+        if (i != 0) {
+            cmdline_string += " ";
+        }
+
+        cmdline_string += argv[i];
+        argvs.push_back(argv[i]);
+    }
+
+    cmdline = strdup(cmdline_string.c_str());  // another small memory leak
+    assert(cmdline);
+
+    // Compute a simple sum of all the chars in argv
+    for (const char* c = cmdline; *c; c++) {
+        argv_sum += *c;
+    }
 }
 
-const vector<string>& GetArgvs() { return argvs; }
-const char* GetArgv()            { return cmdline; }
-const char* GetArgv0()           { return argv0; }
-uint32 GetArgvSum()              { return argv_sum; }
+const vector<string>& GetArgvs() {
+    return argvs;
+}
+const char* GetArgv()            {
+    return cmdline;
+}
+const char* GetArgv0()           {
+    return argv0;
+}
+uint32 GetArgvSum()              {
+    return argv_sum;
+}
 const char* ProgramInvocationName() {             // like the GNU libc fn
-  return GetArgv0();
+    return GetArgv0();
 }
 const char* ProgramInvocationShortName() {        // like the GNU libc fn
-  const char* slash = strrchr(argv0, '/');
+    const char* slash = strrchr(argv0, '/');
 #ifdef OS_WINDOWS
-  if (!slash)  slash = strrchr(argv0, '\\');
+
+    if (!slash) {
+        slash = strrchr(argv0, '\\');
+    }
+
 #endif
-  return slash ? slash + 1 : argv0;
+    return slash ? slash + 1 : argv0;
 }
 
 void SetUsageMessage(const string& usage) {
-  if (program_usage != NULL)
-    ReportError(DIE, "ERROR: SetUsageMessage() called twice\n");
-  program_usage = strdup(usage.c_str());      // small memory leak
+    if (program_usage != NULL) {
+        ReportError(DIE, "ERROR: SetUsageMessage() called twice\n");
+    }
+
+    program_usage = strdup(usage.c_str());      // small memory leak
 }
 
 const char* ProgramUsage() {
-  if (program_usage) {
-    return program_usage;
-  }
-  return "Warning: SetUsageMessage() never called";
+    if (program_usage) {
+        return program_usage;
+    }
+
+    return "Warning: SetUsageMessage() never called";
 }
 
 // --------------------------------------------------------------------
@@ -1532,13 +1847,15 @@ const char* ProgramUsage() {
 static const char* version_string = NULL;
 
 void SetVersionString(const string& version) {
-  if (version_string != NULL)
-    ReportError(DIE, "ERROR: SetVersionString() called twice\n");
-  version_string = strdup(version.c_str());   // small memory leak
+    if (version_string != NULL) {
+        ReportError(DIE, "ERROR: SetVersionString() called twice\n");
+    }
+
+    version_string = strdup(version.c_str());   // small memory leak
 }
 
 const char* VersionString() {
-  return version_string ? version_string : "";
+    return version_string ? version_string : "";
 }
 
 
@@ -1562,63 +1879,77 @@ const char* VersionString() {
 
 
 bool GetCommandLineOption(const char* name, string* value) {
-  if (NULL == name)
-    return false;
-  assert(value);
+    if (NULL == name) {
+        return false;
+    }
 
-  FlagRegistry* const registry = FlagRegistry::GlobalRegistry();
-  FlagRegistryLock frl(registry);
-  CommandLineFlag* flag = registry->FindFlagLocked(name);
-  if (flag == NULL) {
-    return false;
-  } else {
-    *value = flag->current_value();
-    return true;
-  }
+    assert(value);
+
+    FlagRegistry* const registry = FlagRegistry::GlobalRegistry();
+    FlagRegistryLock frl(registry);
+    CommandLineFlag* flag = registry->FindFlagLocked(name);
+
+    if (flag == NULL) {
+        return false;
+    }
+    else {
+        *value = flag->current_value();
+        return true;
+    }
 }
 
 bool GetCommandLineFlagInfo(const char* name, CommandLineFlagInfo* OUTPUT) {
-  if (NULL == name) return false;
-  FlagRegistry* const registry = FlagRegistry::GlobalRegistry();
-  FlagRegistryLock frl(registry);
-  CommandLineFlag* flag = registry->FindFlagLocked(name);
-  if (flag == NULL) {
-    return false;
-  } else {
-    assert(OUTPUT);
-    flag->FillCommandLineFlagInfo(OUTPUT);
-    return true;
-  }
+    if (NULL == name) {
+        return false;
+    }
+
+    FlagRegistry* const registry = FlagRegistry::GlobalRegistry();
+    FlagRegistryLock frl(registry);
+    CommandLineFlag* flag = registry->FindFlagLocked(name);
+
+    if (flag == NULL) {
+        return false;
+    }
+    else {
+        assert(OUTPUT);
+        flag->FillCommandLineFlagInfo(OUTPUT);
+        return true;
+    }
 }
 
 CommandLineFlagInfo GetCommandLineFlagInfoOrDie(const char* name) {
-  CommandLineFlagInfo info;
-  if (!GetCommandLineFlagInfo(name, &info)) {
-    fprintf(stderr, "FATAL ERROR: flag name '%s' doesn't exist\n", name);
-    gflags_exitfunc(1);    // almost certainly gflags_exitfunc()
-  }
-  return info;
+    CommandLineFlagInfo info;
+
+    if (!GetCommandLineFlagInfo(name, &info)) {
+        fprintf(stderr, "FATAL ERROR: flag name '%s' doesn't exist\n", name);
+        gflags_exitfunc(1);    // almost certainly gflags_exitfunc()
+    }
+
+    return info;
 }
 
 string SetCommandLineOptionWithMode(const char* name, const char* value,
                                     FlagSettingMode set_mode) {
-  string result;
-  FlagRegistry* const registry = FlagRegistry::GlobalRegistry();
-  FlagRegistryLock frl(registry);
-  CommandLineFlag* flag = registry->FindFlagLocked(name);
-  if (flag) {
-    CommandLineFlagParser parser(registry);
-    result = parser.ProcessSingleOptionLocked(flag, value, set_mode);
-    if (!result.empty()) {   // in the error case, we've already logged
-      // Could consider logging this change
+    string result;
+    FlagRegistry* const registry = FlagRegistry::GlobalRegistry();
+    FlagRegistryLock frl(registry);
+    CommandLineFlag* flag = registry->FindFlagLocked(name);
+
+    if (flag) {
+        CommandLineFlagParser parser(registry);
+        result = parser.ProcessSingleOptionLocked(flag, value, set_mode);
+
+        if (!result.empty()) {   // in the error case, we've already logged
+            // Could consider logging this change
+        }
     }
-  }
-  // The API of this function is that we return empty string on error
-  return result;
+
+    // The API of this function is that we return empty string on error
+    return result;
 }
 
 string SetCommandLineOption(const char* name, const char* value) {
-  return SetCommandLineOptionWithMode(name, value, SET_FLAGS_VALUE);
+    return SetCommandLineOptionWithMode(name, value, SET_FLAGS_VALUE);
 }
 
 // --------------------------------------------------------------------
@@ -1632,68 +1963,73 @@ string SetCommandLineOption(const char* name, const char* value) {
 // --------------------------------------------------------------------
 
 class FlagSaverImpl {
- public:
-  // Constructs an empty FlagSaverImpl object.
-  explicit FlagSaverImpl(FlagRegistry* main_registry)
-      : main_registry_(main_registry) { }
-  ~FlagSaverImpl() {
-    // reclaim memory from each of our CommandLineFlags
-    vector<CommandLineFlag*>::const_iterator it;
-    for (it = backup_registry_.begin(); it != backup_registry_.end(); ++it)
-      delete *it;
-  }
+  public:
+    // Constructs an empty FlagSaverImpl object.
+    explicit FlagSaverImpl(FlagRegistry* main_registry)
+        : main_registry_(main_registry) { }
+    ~FlagSaverImpl() {
+        // reclaim memory from each of our CommandLineFlags
+        vector<CommandLineFlag*>::const_iterator it;
 
-  // Saves the flag states from the flag registry into this object.
-  // It's an error to call this more than once.
-  // Must be called when the registry mutex is not held.
-  void SaveFromRegistry() {
-    FlagRegistryLock frl(main_registry_);
-    assert(backup_registry_.empty());   // call only once!
-    for (FlagRegistry::FlagConstIterator it = main_registry_->flags_.begin();
-         it != main_registry_->flags_.end();
-         ++it) {
-      const CommandLineFlag* main = it->second;
-      // Sets up all the const variables in backup correctly
-      CommandLineFlag* backup = new CommandLineFlag(
-          main->name(), main->help(), main->filename(),
-          main->current_->New(), main->defvalue_->New());
-      // Sets up all the non-const variables in backup correctly
-      backup->CopyFrom(*main);
-      backup_registry_.push_back(backup);   // add it to a convenient list
+        for (it = backup_registry_.begin(); it != backup_registry_.end(); ++it) {
+            delete *it;
+        }
     }
-  }
 
-  // Restores the saved flag states into the flag registry.  We
-  // assume no flags were added or deleted from the registry since
-  // the SaveFromRegistry; if they were, that's trouble!  Must be
-  // called when the registry mutex is not held.
-  void RestoreToRegistry() {
-    FlagRegistryLock frl(main_registry_);
-    vector<CommandLineFlag*>::const_iterator it;
-    for (it = backup_registry_.begin(); it != backup_registry_.end(); ++it) {
-      CommandLineFlag* main = main_registry_->FindFlagLocked((*it)->name());
-      if (main != NULL) {       // if NULL, flag got deleted from registry(!)
-        main->CopyFrom(**it);
-      }
+    // Saves the flag states from the flag registry into this object.
+    // It's an error to call this more than once.
+    // Must be called when the registry mutex is not held.
+    void SaveFromRegistry() {
+        FlagRegistryLock frl(main_registry_);
+        assert(backup_registry_.empty());   // call only once!
+
+        for (FlagRegistry::FlagConstIterator it = main_registry_->flags_.begin();
+                it != main_registry_->flags_.end();
+                ++it) {
+            const CommandLineFlag* main = it->second;
+            // Sets up all the const variables in backup correctly
+            CommandLineFlag* backup = new CommandLineFlag(
+                main->name(), main->help(), main->filename(),
+                main->current_->New(), main->defvalue_->New());
+            // Sets up all the non-const variables in backup correctly
+            backup->CopyFrom(*main);
+            backup_registry_.push_back(backup);   // add it to a convenient list
+        }
     }
-  }
 
- private:
-  FlagRegistry* const main_registry_;
-  vector<CommandLineFlag*> backup_registry_;
+    // Restores the saved flag states into the flag registry.  We
+    // assume no flags were added or deleted from the registry since
+    // the SaveFromRegistry; if they were, that's trouble!  Must be
+    // called when the registry mutex is not held.
+    void RestoreToRegistry() {
+        FlagRegistryLock frl(main_registry_);
+        vector<CommandLineFlag*>::const_iterator it;
 
-  FlagSaverImpl(const FlagSaverImpl&);  // no copying!
-  void operator=(const FlagSaverImpl&);
+        for (it = backup_registry_.begin(); it != backup_registry_.end(); ++it) {
+            CommandLineFlag* main = main_registry_->FindFlagLocked((*it)->name());
+
+            if (main != NULL) {       // if NULL, flag got deleted from registry(!)
+                main->CopyFrom(**it);
+            }
+        }
+    }
+
+  private:
+    FlagRegistry* const main_registry_;
+    vector<CommandLineFlag*> backup_registry_;
+
+    FlagSaverImpl(const FlagSaverImpl&);  // no copying!
+    void operator=(const FlagSaverImpl&);
 };
 
 FlagSaver::FlagSaver()
     : impl_(new FlagSaverImpl(FlagRegistry::GlobalRegistry())) {
-  impl_->SaveFromRegistry();
+    impl_->SaveFromRegistry();
 }
 
 FlagSaver::~FlagSaver() {
-  impl_->RestoreToRegistry();
-  delete impl_;
+    impl_->RestoreToRegistry();
+    delete impl_;
 }
 
 
@@ -1714,85 +2050,96 @@ FlagSaver::~FlagSaver() {
 
 static string TheseCommandlineFlagsIntoString(
     const vector<CommandLineFlagInfo>& flags) {
-  vector<CommandLineFlagInfo>::const_iterator i;
+    vector<CommandLineFlagInfo>::const_iterator i;
 
-  size_t retval_space = 0;
-  for (i = flags.begin(); i != flags.end(); ++i) {
-    // An (over)estimate of how much space it will take to print this flag
-    retval_space += i->name.length() + i->current_value.length() + 5;
-  }
+    size_t retval_space = 0;
 
-  string retval;
-  retval.reserve(retval_space);
-  for (i = flags.begin(); i != flags.end(); ++i) {
-    retval += "--";
-    retval += i->name;
-    retval += "=";
-    retval += i->current_value;
-    retval += "\n";
-  }
-  return retval;
+    for (i = flags.begin(); i != flags.end(); ++i) {
+        // An (over)estimate of how much space it will take to print this flag
+        retval_space += i->name.length() + i->current_value.length() + 5;
+    }
+
+    string retval;
+    retval.reserve(retval_space);
+
+    for (i = flags.begin(); i != flags.end(); ++i) {
+        retval += "--";
+        retval += i->name;
+        retval += "=";
+        retval += i->current_value;
+        retval += "\n";
+    }
+
+    return retval;
 }
 
 string CommandlineFlagsIntoString() {
-  vector<CommandLineFlagInfo> sorted_flags;
-  GetAllFlags(&sorted_flags);
-  return TheseCommandlineFlagsIntoString(sorted_flags);
+    vector<CommandLineFlagInfo> sorted_flags;
+    GetAllFlags(&sorted_flags);
+    return TheseCommandlineFlagsIntoString(sorted_flags);
 }
 
 bool ReadFlagsFromString(const string& flagfilecontents,
                          const char* /*prog_name*/,  // TODO(csilvers): nix this
                          bool errors_are_fatal) {
-  FlagRegistry* const registry = FlagRegistry::GlobalRegistry();
-  FlagSaverImpl saved_states(registry);
-  saved_states.SaveFromRegistry();
+    FlagRegistry* const registry = FlagRegistry::GlobalRegistry();
+    FlagSaverImpl saved_states(registry);
+    saved_states.SaveFromRegistry();
 
-  CommandLineFlagParser parser(registry);
-  registry->Lock();
-  parser.ProcessOptionsFromStringLocked(flagfilecontents, SET_FLAGS_VALUE);
-  registry->Unlock();
-  // Should we handle --help and such when reading flags from a string?  Sure.
-  HandleCommandLineHelpFlags();
-  if (parser.ReportErrors()) {
-    // Error.  Restore all global flags to their previous values.
-    if (errors_are_fatal)
-      gflags_exitfunc(1);
-    saved_states.RestoreToRegistry();
-    return false;
-  }
-  return true;
+    CommandLineFlagParser parser(registry);
+    registry->Lock();
+    parser.ProcessOptionsFromStringLocked(flagfilecontents, SET_FLAGS_VALUE);
+    registry->Unlock();
+    // Should we handle --help and such when reading flags from a string?  Sure.
+    HandleCommandLineHelpFlags();
+
+    if (parser.ReportErrors()) {
+        // Error.  Restore all global flags to their previous values.
+        if (errors_are_fatal) {
+            gflags_exitfunc(1);
+        }
+
+        saved_states.RestoreToRegistry();
+        return false;
+    }
+
+    return true;
 }
 
 // TODO(csilvers): nix prog_name in favor of ProgramInvocationShortName()
-bool AppendFlagsIntoFile(const string& filename, const char *prog_name) {
-  FILE *fp = fopen(filename.c_str(), "a");
-  if (!fp) {
-    return false;
-  }
+bool AppendFlagsIntoFile(const string& filename, const char* prog_name) {
+    FILE* fp = fopen(filename.c_str(), "a");
 
-  if (prog_name)
-    fprintf(fp, "%s\n", prog_name);
-
-  vector<CommandLineFlagInfo> flags;
-  GetAllFlags(&flags);
-  // But we don't want --flagfile, which leads to weird recursion issues
-  vector<CommandLineFlagInfo>::iterator i;
-  for (i = flags.begin(); i != flags.end(); ++i) {
-    if (strcmp(i->name.c_str(), "flagfile") == 0) {
-      flags.erase(i);
-      break;
+    if (!fp) {
+        return false;
     }
-  }
-  fprintf(fp, "%s", TheseCommandlineFlagsIntoString(flags).c_str());
 
-  fclose(fp);
-  return true;
+    if (prog_name) {
+        fprintf(fp, "%s\n", prog_name);
+    }
+
+    vector<CommandLineFlagInfo> flags;
+    GetAllFlags(&flags);
+    // But we don't want --flagfile, which leads to weird recursion issues
+    vector<CommandLineFlagInfo>::iterator i;
+
+    for (i = flags.begin(); i != flags.end(); ++i) {
+        if (strcmp(i->name.c_str(), "flagfile") == 0) {
+            flags.erase(i);
+            break;
+        }
+    }
+
+    fprintf(fp, "%s", TheseCommandlineFlagsIntoString(flags).c_str());
+
+    fclose(fp);
+    return true;
 }
 
 bool ReadFromFlagsFile(const string& filename, const char* prog_name,
                        bool errors_are_fatal) {
-  return ReadFlagsFromString(ReadFileIntoString(filename.c_str()),
-                             prog_name, errors_are_fatal);
+    return ReadFlagsFromString(ReadFileIntoString(filename.c_str()),
+                               prog_name, errors_are_fatal);
 }
 
 
@@ -1809,24 +2156,24 @@ bool ReadFromFlagsFile(const string& filename, const char* prog_name,
 //       DEFINE_bool(myflag, BoolFromEnv("MYFLAG_DEFAULT", false), "whatever");
 // --------------------------------------------------------------------
 
-bool BoolFromEnv(const char *v, bool dflt) {
-  return GetFromEnv(v, "bool", dflt);
+bool BoolFromEnv(const char* v, bool dflt) {
+    return GetFromEnv(v, "bool", dflt);
 }
-int32 Int32FromEnv(const char *v, int32 dflt) {
-  return GetFromEnv(v, "int32", dflt);
+int32 Int32FromEnv(const char* v, int32 dflt) {
+    return GetFromEnv(v, "int32", dflt);
 }
-int64 Int64FromEnv(const char *v, int64 dflt)    {
-  return GetFromEnv(v, "int64", dflt);
+int64 Int64FromEnv(const char* v, int64 dflt)    {
+    return GetFromEnv(v, "int64", dflt);
 }
-uint64 Uint64FromEnv(const char *v, uint64 dflt) {
-  return GetFromEnv(v, "uint64", dflt);
+uint64 Uint64FromEnv(const char* v, uint64 dflt) {
+    return GetFromEnv(v, "uint64", dflt);
 }
-double DoubleFromEnv(const char *v, double dflt) {
-  return GetFromEnv(v, "double", dflt);
+double DoubleFromEnv(const char* v, double dflt) {
+    return GetFromEnv(v, "double", dflt);
 }
-const char *StringFromEnv(const char *varname, const char *dflt) {
-  const char* const val = getenv(varname);
-  return val ? val : dflt;
+const char* StringFromEnv(const char* varname, const char* dflt) {
+    const char* const val = getenv(varname);
+    return val ? val : dflt;
 }
 
 
@@ -1844,27 +2191,27 @@ const char *StringFromEnv(const char *varname, const char *dflt) {
 
 bool RegisterFlagValidator(const bool* flag,
                            bool (*validate_fn)(const char*, bool)) {
-  return AddFlagValidator(flag, reinterpret_cast<ValidateFnProto>(validate_fn));
+    return AddFlagValidator(flag, reinterpret_cast<ValidateFnProto>(validate_fn));
 }
 bool RegisterFlagValidator(const int32* flag,
                            bool (*validate_fn)(const char*, int32)) {
-  return AddFlagValidator(flag, reinterpret_cast<ValidateFnProto>(validate_fn));
+    return AddFlagValidator(flag, reinterpret_cast<ValidateFnProto>(validate_fn));
 }
 bool RegisterFlagValidator(const int64* flag,
                            bool (*validate_fn)(const char*, int64)) {
-  return AddFlagValidator(flag, reinterpret_cast<ValidateFnProto>(validate_fn));
+    return AddFlagValidator(flag, reinterpret_cast<ValidateFnProto>(validate_fn));
 }
 bool RegisterFlagValidator(const uint64* flag,
                            bool (*validate_fn)(const char*, uint64)) {
-  return AddFlagValidator(flag, reinterpret_cast<ValidateFnProto>(validate_fn));
+    return AddFlagValidator(flag, reinterpret_cast<ValidateFnProto>(validate_fn));
 }
 bool RegisterFlagValidator(const double* flag,
                            bool (*validate_fn)(const char*, double)) {
-  return AddFlagValidator(flag, reinterpret_cast<ValidateFnProto>(validate_fn));
+    return AddFlagValidator(flag, reinterpret_cast<ValidateFnProto>(validate_fn));
 }
 bool RegisterFlagValidator(const string* flag,
                            bool (*validate_fn)(const char*, const string&)) {
-  return AddFlagValidator(flag, reinterpret_cast<ValidateFnProto>(validate_fn));
+    return AddFlagValidator(flag, reinterpret_cast<ValidateFnProto>(validate_fn));
 }
 
 
@@ -1880,45 +2227,48 @@ bool RegisterFlagValidator(const string* flag,
 // --------------------------------------------------------------------
 
 static uint32 ParseCommandLineFlagsInternal(int* argc, char*** argv,
-                                            bool remove_flags, bool do_report) {
-  SetArgv(*argc, const_cast<const char**>(*argv));    // save it for later
+        bool remove_flags, bool do_report) {
+    SetArgv(*argc, const_cast<const char**>(*argv));    // save it for later
 
-  FlagRegistry* const registry = FlagRegistry::GlobalRegistry();
-  CommandLineFlagParser parser(registry);
+    FlagRegistry* const registry = FlagRegistry::GlobalRegistry();
+    CommandLineFlagParser parser(registry);
 
-  // When we parse the commandline flags, we'll handle --flagfile,
-  // --tryfromenv, etc. as we see them (since flag-evaluation order
-  // may be important).  But sometimes apps set FLAGS_tryfromenv/etc.
-  // manually before calling ParseCommandLineFlags.  We want to evaluate
-  // those too, as if they were the first flags on the commandline.
-  registry->Lock();
-  parser.ProcessFlagfileLocked(FLAGS_flagfile, SET_FLAGS_VALUE);
-  // Last arg here indicates whether flag-not-found is a fatal error or not
-  parser.ProcessFromenvLocked(FLAGS_fromenv, SET_FLAGS_VALUE, true);
-  parser.ProcessFromenvLocked(FLAGS_tryfromenv, SET_FLAGS_VALUE, false);
-  registry->Unlock();
+    // When we parse the commandline flags, we'll handle --flagfile,
+    // --tryfromenv, etc. as we see them (since flag-evaluation order
+    // may be important).  But sometimes apps set FLAGS_tryfromenv/etc.
+    // manually before calling ParseCommandLineFlags.  We want to evaluate
+    // those too, as if they were the first flags on the commandline.
+    registry->Lock();
+    parser.ProcessFlagfileLocked(FLAGS_flagfile, SET_FLAGS_VALUE);
+    // Last arg here indicates whether flag-not-found is a fatal error or not
+    parser.ProcessFromenvLocked(FLAGS_fromenv, SET_FLAGS_VALUE, true);
+    parser.ProcessFromenvLocked(FLAGS_tryfromenv, SET_FLAGS_VALUE, false);
+    registry->Unlock();
 
-  // Now get the flags specified on the commandline
-  const int r = parser.ParseNewCommandLineFlags(argc, argv, remove_flags);
+    // Now get the flags specified on the commandline
+    const int r = parser.ParseNewCommandLineFlags(argc, argv, remove_flags);
 
-  if (do_report)
-    HandleCommandLineHelpFlags();   // may cause us to exit on --help, etc.
+    if (do_report) {
+        HandleCommandLineHelpFlags();    // may cause us to exit on --help, etc.
+    }
 
-  // See if any of the unset flags fail their validation checks
-  parser.ValidateAllFlags();
+    // See if any of the unset flags fail their validation checks
+    parser.ValidateAllFlags();
 
-  if (parser.ReportErrors())        // may cause us to exit on illegal flags
-    gflags_exitfunc(1);
-  return r;
+    if (parser.ReportErrors()) {      // may cause us to exit on illegal flags
+        gflags_exitfunc(1);
+    }
+
+    return r;
 }
 
 uint32 ParseCommandLineFlags(int* argc, char*** argv, bool remove_flags) {
-  return ParseCommandLineFlagsInternal(argc, argv, remove_flags, true);
+    return ParseCommandLineFlagsInternal(argc, argv, remove_flags, true);
 }
 
 uint32 ParseCommandLineNonHelpFlags(int* argc, char*** argv,
                                     bool remove_flags) {
-  return ParseCommandLineFlagsInternal(argc, argv, remove_flags, false);
+    return ParseCommandLineFlagsInternal(argc, argv, remove_flags, false);
 }
 
 // --------------------------------------------------------------------
@@ -1935,26 +2285,30 @@ uint32 ParseCommandLineNonHelpFlags(int* argc, char*** argv,
 // --------------------------------------------------------------------
 
 void AllowCommandLineReparsing() {
-  allow_command_line_reparsing = true;
+    allow_command_line_reparsing = true;
 }
 
 void ReparseCommandLineNonHelpFlags() {
-  // We make a copy of argc and argv to pass in
-  const vector<string>& argvs = GetArgvs();
-  int tmp_argc = static_cast<int>(argvs.size());
-  char** tmp_argv = new char* [tmp_argc + 1];
-  for (int i = 0; i < tmp_argc; ++i)
-    tmp_argv[i] = strdup(argvs[i].c_str());   // TODO(csilvers): don't dup
+    // We make a copy of argc and argv to pass in
+    const vector<string>& argvs = GetArgvs();
+    int tmp_argc = static_cast<int>(argvs.size());
+    char** tmp_argv = new char* [tmp_argc + 1];
 
-  ParseCommandLineNonHelpFlags(&tmp_argc, &tmp_argv, false);
+    for (int i = 0; i < tmp_argc; ++i) {
+        tmp_argv[i] = strdup(argvs[i].c_str());    // TODO(csilvers): don't dup
+    }
 
-  for (int i = 0; i < tmp_argc; ++i)
-    free(tmp_argv[i]);
-  delete[] tmp_argv;
+    ParseCommandLineNonHelpFlags(&tmp_argc, &tmp_argv, false);
+
+    for (int i = 0; i < tmp_argc; ++i) {
+        free(tmp_argv[i]);
+    }
+
+    delete[] tmp_argv;
 }
 
 void ShutDownCommandLineFlags() {
-  FlagRegistry::DeleteGlobalRegistry();
+    FlagRegistry::DeleteGlobalRegistry();
 }
 
 _END_GOOGLE_NAMESPACE_

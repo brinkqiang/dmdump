@@ -14,7 +14,7 @@ SO_VERSION=3:0:1
 AC_CONFIG_SRCDIR(README)
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([dist-zip])
-AM_CONFIG_HEADER(src/config.h)
+AM_CONFIG_HEADER(src/gflags_config.h)
 
 # Checks for programs.
 AC_PROG_CXX
@@ -120,9 +120,9 @@ AC_DEFINE(GFLAGS_DLL_DECL,,
           [Always the empty-string on non-windows systems.
            On windows, should be "__declspec(dllexport)".
 	   This way, when we compile the dll, we export our functions/classes.
-	   It's safe to define this here because config.h is only used
+	   It's safe to define this here because gflags_config.h is only used
 	   internally, to compile the DLL, and every DLL source file
-	   #includes "config.h" before anything else.])
+	   #includes "gflags_config.h" before anything else.])
 
 # Write generated configuration file, and also .h files
 AC_CONFIG_FILES([Makefile

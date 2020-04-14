@@ -5,7 +5,7 @@
    unix config.h but also runs code in the windows directory.
    */
 #ifdef __MINGW32__
-#include "../config.h"
+#include "../gflags_config.h"
 #define GOOGLE_GFLAGS_WINDOWS_CONFIG_H_
 #endif
 
@@ -16,7 +16,7 @@
    "__declspec(dllexport)". This way, when we compile the dll, we export our
    functions/classes. It's safe to define this here because config.h is only
    used internally, to compile the DLL, and every DLL source file #includes
-   "config.h" before anything else. */
+   "gflags_config.h" before anything else. */
 #ifndef GFLAGS_DLL_DECL
 # define GFLAGS_IS_A_DLL  1   /* not set if you're statically linking */
 # define GFLAGS_DLL_DECL  __declspec(dllexport)
@@ -134,6 +134,6 @@
 #endif
 
 // TODO(csilvers): include windows/port.h in every relevant source file instead?
-#include "windows/port.h"
+#include "windows/gflags_port.h"
 
 #endif  /* GOOGLE_GFLAGS_WINDOWS_CONFIG_H_ */

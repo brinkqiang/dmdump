@@ -47,15 +47,15 @@ using GOOGLE_NAMESPACE::ParseCommandLineFlags;
 DEFINE_bool(test, true, "This text should be stripped out");
 
 int main(int argc, char** argv) {
-  SetUsageMessage("Usage message");
-  ParseCommandLineFlags(&argc, &argv, false);
+    SetUsageMessage("Usage message");
+    ParseCommandLineFlags(&argc, &argv, false);
 
-  // Unfortunately, for us, libtool can replace executables with a shell
-  // script that does some work before calling the 'real' executable
-  // under a different name.  We need the 'real' executable name to run
-  // 'strings' on it, so we construct this binary to print the real
-  // name (argv[0]) on stdout when run.
-  puts(argv[0]);
+    // Unfortunately, for us, libtool can replace executables with a shell
+    // script that does some work before calling the 'real' executable
+    // under a different name.  We need the 'real' executable name to run
+    // 'strings' on it, so we construct this binary to print the real
+    // name (argv[0]) on stdout when run.
+    puts(argv[0]);
 
-  return 0;
+    return 0;
 }

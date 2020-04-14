@@ -22,30 +22,24 @@
 #ifndef __DMFLAGS_H_INCLUDE__
 #define __DMFLAGS_H_INCLUDE__
 
-#ifdef WIN32
-#include "windows/gflags/gflags.h"
-#else
 #include "gflags/gflags.h"
-#endif
 
 using namespace google;
 
-class CDMFlags
-{
-public:
-	CDMFlags(int argc, char **argv)
-	{
-		ParseCommandLineFlags(&argc, &argv, true);
-		m_oArgvs = GetArgvs();
-	}
-	~CDMFlags()
-	{
-		ShutDownCommandLineFlags();
-	}
-private:
-	std::vector<std::string> m_oArgvs;
+class CDMFlags {
+  public:
+    CDMFlags(int argc, char** argv) {
+        ParseCommandLineFlags(&argc, &argv, true);
+        m_oArgvs = GetArgvs();
+
+    }
+    ~CDMFlags() {
+        ShutDownCommandLineFlags();
+    }
+  private:
+    std::vector<std::string> m_oArgvs;
 };
 
-#define DMFLAGS_INIT(argc, argv)	CDMFlags oInitDMFlags(argc, argv)
+#define DMFLAGS_INIT(argc, argv)    CDMFlags oInitDMFlags(argc, argv)
 
 #endif

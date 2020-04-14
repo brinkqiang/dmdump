@@ -35,7 +35,7 @@
 #define GFLAGS_UTIL_H_
 
 #include <assert.h>
-#include <config.h>
+#include <gflags_config.h>
 #ifdef HAVE_INTTYPES_H
 # include <inttypes.h>
 #endif
@@ -230,23 +230,23 @@ class Test {};
 #if defined(__MINGW32__)
 #include <io.h>
 inline void MakeTmpdir(std::string* path) {
-  // I had trouble creating a directory in /tmp from mingw
-  *path = "./gflags_unittest_testdir";
-  mkdir(path->c_str());   // mingw has a weird one-arg mkdir
+    // I had trouble creating a directory in /tmp from mingw
+    *path = "./gflags_unittest_testdir";
+    mkdir(path->c_str());   // mingw has a weird one-arg mkdir
 }
 #elif defined(_MSC_VER)
 #include <direct.h>
 inline void MakeTmpdir(std::string* path) {
-  char tmppath_buffer[1024];
-  int tmppath_len = GetTempPathA(sizeof(tmppath_buffer), tmppath_buffer);
-  assert(tmppath_len > 0 && tmppath_len < sizeof(tmppath_buffer));
-  assert(tmppath_buffer[tmppath_len - 1] == '\\');   // API guarantees it
-  *path = std::string(tmppath_buffer) + "gflags_unittest_testdir";
-  _mkdir(path->c_str());
+    char tmppath_buffer[1024];
+    int tmppath_len = GetTempPathA(sizeof(tmppath_buffer), tmppath_buffer);
+    assert(tmppath_len > 0 && tmppath_len < sizeof(tmppath_buffer));
+    assert(tmppath_buffer[tmppath_len - 1] == '\\');   // API guarantees it
+    *path = std::string(tmppath_buffer) + "gflags_unittest_testdir";
+    _mkdir(path->c_str());
 }
 #else
 inline void MakeTmpdir(std::string* path) {
-  mkdir(path->c_str(), 0755);
+    mkdir(path->c_str(), 0755);
 }
 #endif
 
@@ -254,70 +254,74 @@ inline void MakeTmpdir(std::string* path) {
 
 inline void InternalStringPrintf(std::string* output, const char* format,
                                  va_list ap) {
-  char space[128];    // try a small buffer and hope it fits
+    char space[128];    // try a small buffer and hope it fits
 
-  // It's possible for methods that use a va_list to invalidate
-  // the data in it upon use.  The fix is to make a copy
-  // of the structure before using it and use that copy instead.
-  va_list backup_ap;
-  va_copy(backup_ap, ap);
-  int bytes_written = vsnprintf(space, sizeof(space), format, backup_ap);
-  va_end(backup_ap);
-
-  if ((bytes_written >= 0) && (bytes_written < sizeof(space))) {
-    output->append(space, bytes_written);
-    return;
-  }
-
-  // Repeatedly increase buffer size until it fits.
-  int length = sizeof(space);
-  while (true) {
-    if (bytes_written < 0) {
-      // Older snprintf() behavior. :-(  Just try doubling the buffer size
-      length *= 2;
-    } else {
-      // We need exactly "bytes_written+1" characters
-      length = bytes_written+1;
-    }
-    char* buf = new char[length];
-
-    // Restore the va_list before we use it again
+    // It's possible for methods that use a va_list to invalidate
+    // the data in it upon use.  The fix is to make a copy
+    // of the structure before using it and use that copy instead.
+    va_list backup_ap;
     va_copy(backup_ap, ap);
-    bytes_written = vsnprintf(buf, length, format, backup_ap);
+    int bytes_written = vsnprintf(space, sizeof(space), format, backup_ap);
     va_end(backup_ap);
 
-    if ((bytes_written >= 0) && (bytes_written < length)) {
-      output->append(buf, bytes_written);
-      delete[] buf;
-      return;
+    if ((bytes_written >= 0) && (bytes_written < sizeof(space))) {
+        output->append(space, bytes_written);
+        return;
     }
-    delete[] buf;
-  }
+
+    // Repeatedly increase buffer size until it fits.
+    int length = sizeof(space);
+
+    while (true) {
+        if (bytes_written < 0) {
+            // Older snprintf() behavior. :-(  Just try doubling the buffer size
+            length *= 2;
+        }
+        else {
+            // We need exactly "bytes_written+1" characters
+            length = bytes_written+1;
+        }
+
+        char* buf = new char[length];
+
+        // Restore the va_list before we use it again
+        va_copy(backup_ap, ap);
+        bytes_written = vsnprintf(buf, length, format, backup_ap);
+        va_end(backup_ap);
+
+        if ((bytes_written >= 0) && (bytes_written < length)) {
+            output->append(buf, bytes_written);
+            delete[] buf;
+            return;
+        }
+
+        delete[] buf;
+    }
 }
 
 // Clears output before writing to it.
 inline void SStringPrintf(std::string* output, const char* format, ...) {
-  va_list ap;
-  va_start(ap, format);
-  output->clear();
-  InternalStringPrintf(output, format, ap);
-  va_end(ap);
+    va_list ap;
+    va_start(ap, format);
+    output->clear();
+    InternalStringPrintf(output, format, ap);
+    va_end(ap);
 }
 
 inline void StringAppendF(std::string* output, const char* format, ...) {
-  va_list ap;
-  va_start(ap, format);
-  InternalStringPrintf(output, format, ap);
-  va_end(ap);
+    va_list ap;
+    va_start(ap, format);
+    InternalStringPrintf(output, format, ap);
+    va_end(ap);
 }
 
 inline std::string StringPrintf(const char* format, ...) {
-  va_list ap;
-  va_start(ap, format);
-  std::string output;
-  InternalStringPrintf(&output, format, ap);
-  va_end(ap);
-  return output;
+    va_list ap;
+    va_start(ap, format);
+    std::string output;
+    InternalStringPrintf(&output, format, ap);
+    va_end(ap);
+    return output;
 }
 
 _END_GOOGLE_NAMESPACE_

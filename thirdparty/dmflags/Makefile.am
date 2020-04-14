@@ -206,7 +206,7 @@ libtool: $(LIBTOOL_DEPS)
 
 EXTRA_DIST = packages/rpm.sh packages/rpm/rpm.spec packages/deb.sh packages/deb \
 	libtool $(SCRIPTS) \
-	src/windows/config.h src/windows/port.h src/windows/port.cc \
+	src/windows/gflags_config.h src/windows/gflags_port.h src/windows/gflags_port.cc \
 	src/windows/gflags/gflags.h src/windows/gflags/gflags_declare.h \
         src/windows/gflags/gflags_completions.h \
 	$(WINDOWS_PROJECTS) \
