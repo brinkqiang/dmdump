@@ -3,101 +3,19 @@ cmake_minimum_required(VERSION 2.8)
 PROJECT(dmdump)
 
 LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-
-IF (WIN32)
-    MESSAGE(STATUS "Now is windows")
-
-    SET(DMOS_NAME "win")
-
-    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" )
-    IF(MSVC)
-        ADD_DEFINITIONS(/bigobj)
-        ADD_COMPILE_OPTIONS(/W3 /wd4005 /wd4068 /wd4244 /wd4267 /wd4800)
-        ADD_DEFINITIONS(/DNOMINMAX /DWIN32_LEAN_AND_MEAN=1 /D_CRT_SECURE_NO_WARNINGS /D_SCL_SECURE_NO_WARNINGS)
-        IF (MSVC_VERSION GREATER_EQUAL "1900")
-            INCLUDE(CheckCXXCompilerFlag)
-            CHECK_CXX_COMPILER_FLAG("/std:c++latest" _cpp_latest_flag_supported)
-            IF (_cpp_latest_flag_supported)
-                ADD_COMPILE_OPTIONS("/std:c++latest")
-            ENDIF()
-    	ENDIF()
-    ENDIF()
-ELSEIF (APPLE)
-    MESSAGE(STATUS "Now is Apple systems")  
-
-    SET(DMOS_NAME "mac") 
-    SET( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static" )
-    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread" )
-ELSEIF (UNIX)
-    MESSAGE(STATUS "Now is UNIX-like OS")  
- 
-    SET(DMOS_NAME "lin") 
-    SET( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static" )
-    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread -g" )    
-ENDIF ()
+INCLUDE(cmake/ModuleImport.cmake)
+INCLUDE(cmake/ModuleCompileOptions.cmake)
+ModuleSetCompileOptions()
 
 ADD_DEFINITIONS(-DUSE_DMDUMP)
 ADD_DEFINITIONS(-DGFLAGS_DLL_DECL=)
 
 ADD_SUBDIRECTORY(thirdparty/dmflags)
+LibImport("dmdump_module" "src/dmdump_module")
 
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dmflags/include)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dmflags/src)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dmflags/test)
+ModuleImport("dmflags" "thirdparty/dmflags")
 
-IF (WIN32)
-    INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/src/windows)
-ENDIF(WIN32)
-
-IF (WIN32)
-    INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dmflags/src/windows)
-ENDIF(WIN32)
-
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/include)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/src)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/test)
-
-LINK_DIRECTORIES(${CMAKE_SOURCE_DIR}/lib)
-
-SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
-SET(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
-
-FILE(GLOB_RECURSE LIBDUMP_SOURCES
-${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp
-${CMAKE_CURRENT_SOURCE_DIR}/include/*.h
-
-${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc
-${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
-${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp
-${CMAKE_CURRENT_SOURCE_DIR}/src/*.h
-)
-
-IF (WIN32)
-    LIST(APPEND LIBDUMP_SOURCES)
-ENDIF(WIN32)
-
-FILE(GLOB_RECURSE DMDUMP_SOURCES
-${CMAKE_CURRENT_SOURCE_DIR}/main/*.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/main/*.cc
-${CMAKE_CURRENT_SOURCE_DIR}/main/*.c
-${CMAKE_CURRENT_SOURCE_DIR}/main/*.hpp
-${CMAKE_CURRENT_SOURCE_DIR}/main/*.h)
-
-IF (WIN32)
-    ADD_LIBRARY(libdump STATIC ${LIBDUMP_SOURCES})
-    ADD_EXECUTABLE(dmdump ${DMDUMP_SOURCES})
-    TARGET_LINK_LIBRARIES(dmdump libdump dmflags)
-ELSEIF (APPLE)
-    ADD_LIBRARY(libdump STATIC ${LIBDUMP_SOURCES})
-    ADD_EXECUTABLE(dmdump ${DMDUMP_SOURCES})
-    TARGET_LINK_LIBRARIES(dmdump libdump dmflags)
-ELSEIF (UNIX)
-    ADD_LIBRARY(libdump STATIC ${LIBDUMP_SOURCES})
-    ADD_EXECUTABLE(dmdump ${DMDUMP_SOURCES})
-    TARGET_LINK_LIBRARIES(dmdump libdump dmflags)
-ENDIF ()
+ExeImport("test" "dmdump_module")
 
 #ADD_CUSTOM_COMMAND(
 #TARGET dmdumptest
