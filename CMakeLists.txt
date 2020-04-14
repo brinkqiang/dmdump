@@ -10,7 +10,6 @@ ModuleSetCompileOptions()
 ADD_DEFINITIONS(-DUSE_DMDUMP)
 ADD_DEFINITIONS(-DGFLAGS_DLL_DECL=)
 
-ADD_SUBDIRECTORY(thirdparty/dmflags)
 LibImport("dmdump_module" "src/dmdump_module")
 
 ModuleImport("dmflags" "thirdparty/dmflags")
