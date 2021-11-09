@@ -17,13 +17,13 @@ ModuleImport("dmflags" "thirdparty/dmflags")
 
 ExeImport("test" "dmdump_module;dmflags")
 
-#ADD_CUSTOM_COMMAND(
-#TARGET dmdumptest
-#PRE_BUILD
-#COMMAND ${CMAKE_COMMAND} -E copy_if_different
-#${CMAKE_CURRENT_SOURCE_DIR}/config/test.csv
-#$<TARGET_FILE_DIR:dmdumptest>
-#)
+ADD_CUSTOM_COMMAND(
+TARGET dmdump
+PRE_BUILD
+COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tools/procdump.exe $<TARGET_FILE_DIR:dmdump>
+COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tools/procdump64.exe $<TARGET_FILE_DIR:dmdump>
+COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tools/procdump64a.exe $<TARGET_FILE_DIR:dmdump>
+)
 
 #INSTALL(DIRECTORY include/ DESTINATION include)
 INSTALL(TARGETS dmdump
