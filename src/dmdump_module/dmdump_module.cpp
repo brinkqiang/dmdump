@@ -96,11 +96,11 @@ bool DMGenDumpFile(const std::string& strName, bool bWin32)
 
         if (bWin32)
         {
-            sprintf(cmd, "procdump.exe -ma %d %s_%d_%s.dump", (int)vecList[i], strName.c_str(), (int)vecList[i], strTime.c_str());
+            sprintf(cmd, "procdump.exe -ma %d %s_%d_%s.dmp", (int)vecList[i], strName.c_str(), (int)vecList[i], strTime.c_str());
         }
         else
         {
-            sprintf(cmd, "procdump.exe -64 -ma %d %s_%d_%s.dump", (int)vecList[i], strName.c_str(), (int)vecList[i], strTime.c_str());
+            sprintf(cmd, "procdump.exe -64 -ma %d %s_%d_%s.dmp", (int)vecList[i], strName.c_str(), (int)vecList[i], strTime.c_str());
         }
         std::cout << cmd << std::endl;
         std::string strData = DMExecute(cmd);
