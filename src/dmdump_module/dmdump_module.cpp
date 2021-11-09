@@ -104,7 +104,7 @@ bool DMGenDumpFile(const std::string& strName, bool bWin32)
         }
         std::cout << cmd << std::endl;
         std::string strData = DMExecute(cmd);
-        std::cout << strData;
+        std::cout << strData << std::endl;;
     }
 
     return true;
