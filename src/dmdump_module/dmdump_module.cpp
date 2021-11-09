@@ -26,6 +26,7 @@
 #include <stdio.h>
 
 #include "dmstrtk.hpp"
+#include "dmutil.h"
 
 #ifdef WIN32
 #define popen _popen
@@ -78,22 +79,32 @@ std::vector<uint64_t> DMGetProcessList(const std::string& strName)
         {
             vecList.push_back(procEntry.th32ProcessID);
         }
-        printf("PID: %d (%s) \n", procEntry.th32ProcessID, procEntry.szExeFile);
+        //printf("PID: %d (%s) \n", procEntry.th32ProcessID, procEntry.szExeFile);
         bRet = Process32Next(procSnap, &procEntry);
     }
     CloseHandle(procSnap);
     return vecList;
 }
 
-bool DMGenDumpFile(const std::string& strName)
+bool DMGenDumpFile(const std::string& strName, bool bWin32)
 {
     std::vector<uint64_t> vecList = DMGetProcessList(strName);
-
+    std::string strTime = DMFormatDateTime(time(0), "%Y-%m-%d-%H-%M-%S");
     for (int i=0; i < vecList.size(); ++i)
     {
         char cmd[256] = { 0 };
-        sprintf(cmd, "procdump.exe -ma -w %d %s_%d.dmp", (int)vecList[i], strName.c_str(), (int)vecList[i]);
+
+        if (bWin32)
+        {
+            sprintf(cmd, "procdump.exe -ma %d %s_%d_%s.dump", (int)vecList[i], strName.c_str(), (int)vecList[i], strTime.c_str());
+        }
+        else
+        {
+            sprintf(cmd, "procdump.exe -64 -ma %d %s_%d_%s.dump", (int)vecList[i], strName.c_str(), (int)vecList[i], strTime.c_str());
+        }
+        std::cout << cmd << std::endl;
         std::string strData = DMExecute(cmd);
+        std::cout << strData;
     }
 
     return true;
@@ -127,7 +138,7 @@ std::vector<uint64_t> DMGetProcessList(const std::string& strName)
     return vecList;
 }
 
-bool DMGenDumpFile(const std::string& strName)
+bool DMGenDumpFile(const std::string& strName, bool bWin32)
 {
     std::vector<uint64_t> vecList = DMGetProcessList(strName);
 

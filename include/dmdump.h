@@ -30,5 +30,5 @@ std::string DMExecute(const char* cmd);
 
 std::vector<uint64_t> DMGetProcessList(const std::string& strName);
 
-bool DMGenDumpFile(const std::string& strName);
+bool DMGenDumpFile(const std::string& strName, bool bWin32);
 #endif // __DMDUMP_H_INCLUDE__
