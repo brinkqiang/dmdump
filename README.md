@@ -24,6 +24,11 @@ windows命令行闪退进程处理
 procdump -accepteula -64 -w -ma -h server.exe
 ```
 
+linux 直接打印进程调用堆栈
+```
+sudo pstack $(pidof server)
+```
+
 ```cpp
 
 #include "dmdump.h"
