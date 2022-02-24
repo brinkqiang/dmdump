@@ -24,9 +24,13 @@ windows命令行闪退进程处理
 procdump -accepteula -64 -w -ma -h server.exe
 ```
 
-linux 直接打印进程调用堆栈
+linux 直接打印最小进程ID调用堆栈
 ```
-sudo pstack $(pidof server)
+sudo pstack $(pgrep -usuiy -o server)
+```
+linux 直接打印最大进程ID调用堆栈
+```
+sudo pstack $(pgrep -usuiy -n server)
 ```
 
 ```cpp
