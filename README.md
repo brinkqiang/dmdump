@@ -19,6 +19,11 @@ Copyright (c) 2013-2018 brinkqiang (brink.qiang@gmail.com)
 ## Intro
 dmdump -n gameserver
 
+windows命令行闪退进程处理
+```
+procdump -accepteula -64 -w -ma -h server.exe
+```
+
 ```cpp
 
 #include "dmdump.h"
