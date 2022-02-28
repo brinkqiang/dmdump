@@ -26,11 +26,11 @@ procdump -accepteula -64 -w -ma -h server.exe
 
 linux 直接打印最小进程ID调用堆栈
 ```
-sudo pstack $(pgrep -usuiy -o server)
+sudo pstack $(pgrep -uroot -o server)
 ```
 linux 直接打印最大进程ID调用堆栈
 ```
-sudo pstack $(pgrep -usuiy -n server)
+sudo pstack $(pgrep -uroot -n server)
 ```
 
 ```cpp
