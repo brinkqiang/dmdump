@@ -120,6 +120,9 @@ using namespace stdext;
 #include <unistd.h>
 
 #ifndef MAX_PATH
+#ifndef PATH_MAX
+#endif PATH_MAX 255
+#endif
 #define MAX_PATH    PATH_MAX
 #endif
 #define VSNPRINTF vsnprintf
