@@ -121,7 +121,7 @@ using namespace stdext;
 
 #ifndef MAX_PATH
 #ifndef PATH_MAX
-#endif PATH_MAX 255
+#define PATH_MAX 255
 #endif
 #define MAX_PATH    PATH_MAX
 #endif
