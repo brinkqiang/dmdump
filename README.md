@@ -54,6 +54,5 @@ int main(int argc, char **argv)
 
 ```
 ## Contacts
-[![Join the chat](https://badges.gitter.im/brinkqiang/dmdump/Lobby.svg)](https://gitter.im/brinkqiang/dmdump)
 
 ## Thanks
