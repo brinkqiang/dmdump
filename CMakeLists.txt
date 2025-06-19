@@ -33,4 +33,7 @@ if (PROJECT_IS_TOP_LEVEL)
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/depends/procdump64a.exe $<TARGET_FILE_DIR:dmdump>
                 )
         endif()
+
+        AddInstall("dmdump" "")
+
 endif()
