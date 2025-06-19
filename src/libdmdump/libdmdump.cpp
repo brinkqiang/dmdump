@@ -28,7 +28,7 @@
 #include "dmstrtk.hpp"
 #include "dmutil.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #define popen _popen
 #define pclose _pclose
 
@@ -58,7 +58,7 @@ std::string DMExecute(const char* cmd)
     return result;
 }
 
-#ifdef WIN32
+#ifdef _WIN32
 
 std::vector<uint64_t> DMGetProcessList(const std::string& strName)
 {

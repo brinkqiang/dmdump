@@ -25345,7 +25345,7 @@ strtk_register_pair_to_ostream( const std::string::const_iterator )
 
 } // namespace anonymous
 
-#ifdef WIN32
+#ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -25362,7 +25362,7 @@ namespace util {
 class timer {
   public:
 
-#ifdef WIN32
+#ifdef _WIN32
     timer()
         : in_use_( false ) {
         QueryPerformanceFrequency( &clock_frequency_ );
@@ -25432,7 +25432,7 @@ class timer {
 
     bool in_use_;
 
-#ifdef WIN32
+#ifdef _WIN32
     LARGE_INTEGER start_time_;
     LARGE_INTEGER stop_time_;
     LARGE_INTEGER clock_frequency_;
