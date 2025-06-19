@@ -11,6 +11,10 @@ ModuleSetWinCompilerFlags()
 add_definitions(-DUSE_DMDUMP)
 add_definitions(-DGFLAGS_DLL_DECL=)
 
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set(CMAKE_STATIC_LIBRARY_PREFIX "")
+set(CMAKE_SHARED_LIBRARY_PREFIX "")
+
 LibImport("libdmdump" "src/libdmdump")
 
 ModuleImport("dmflags" "thirdparty/dmflags")
