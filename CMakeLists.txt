@@ -11,11 +11,11 @@ ModuleSetWinCompilerFlags()
 ADD_DEFINITIONS(-DUSE_DMDUMP)
 ADD_DEFINITIONS(-DGFLAGS_DLL_DECL=)
 
-LibImport("dmdump_module" "src/dmdump_module")
+LibImport("libdmdump" "src/libdmdump")
 
 ModuleImport("dmflags" "thirdparty/dmflags")
 
-ExeImport("test" "dmdump_module;dmflags")
+ExeImport("test" "libdmdump;dmflags")
 
 ADD_CUSTOM_COMMAND(
 TARGET dmdump
