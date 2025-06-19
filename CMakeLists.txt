@@ -1,31 +1,32 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.21)
 
-PROJECT(dmdump)
+project(dmdump)
 
-LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-INCLUDE(cmake/ModuleImport.cmake)
-INCLUDE(cmake/ModuleCompileOptions.cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+include(cmake/ModuleImport.cmake)
+include(cmake/ModuleCompileOptions.cmake)
 ModuleSetCompileOptions()
 ModuleSetWinCompilerFlags()
 
-ADD_DEFINITIONS(-DUSE_DMDUMP)
-ADD_DEFINITIONS(-DGFLAGS_DLL_DECL=)
+add_definitions(-DUSE_DMDUMP)
+add_definitions(-DGFLAGS_DLL_DECL=)
 
 LibImport("libdmdump" "src/libdmdump")
 
 ModuleImport("dmflags" "thirdparty/dmflags")
 
-ExeImport("test" "libdmdump;dmflags")
+if (PROJECT_IS_TOP_LEVEL)
 
-ADD_CUSTOM_COMMAND(
-TARGET dmdump
-PRE_BUILD
-COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tools/procdump.exe $<TARGET_FILE_DIR:dmdump>
-COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tools/procdump64.exe $<TARGET_FILE_DIR:dmdump>
-COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tools/procdump64a.exe $<TARGET_FILE_DIR:dmdump>
-)
 
-INSTALL(TARGETS dmdump
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib)
+        ExeImport("tools" "libdmdump;dmflags")
+
+        if (WIN32)
+                add_custom_command(
+                TARGET dmdump
+                PRE_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/depends/procdump.exe $<TARGET_FILE_DIR:dmdump>
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/depends/procdump64.exe $<TARGET_FILE_DIR:dmdump>
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/depends/procdump64a.exe $<TARGET_FILE_DIR:dmdump>
+                )
+        endif()
+endif()
