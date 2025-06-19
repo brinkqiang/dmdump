@@ -1,32 +1,12 @@
 #!/bin/bash
 
-# - install depends tools
-# yum -y install git
-# yum -y install gcc gcc-c++ autoconf libtool automake make
-#
-
-# - clone code
-# git clone https://github.com/brinkqiang/dmdump.git
-# pushd dmdump
-# git submodule update --init --recursive
-#
-
-pushd thirdparty/dmflags
-
-libtoolize && aclocal && autoheader && autoconf && automake --add-missing
-sh configure
-
-popd
-
 rm -rf build
-mkdir build
+mkdir -p build
+cd build
 
-pushd build
 cmake -DCMAKE_BUILD_TYPE=relwithdebinfo ..
-cmake --build .
+cmake --build . --config relwithdebinfo -- -j$(nproc)
 
-popd
-
-# popd
+cd ..
 
 # echo continue && read -n 1
